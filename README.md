@@ -119,6 +119,24 @@ npm run build
 npm run preview
 ```
 
+## 桌面应用
+
+### 开发
+
+```bash
+npm run start
+```
+
+### 打包
+
+```bash
+npm run build
+npm run package
+npm run make
+```
+
+打包后的文件位于 `out` 目录。
+
 ## Docker 镜像构建与部署
 
 ### 2. 构建 Docker 镜像

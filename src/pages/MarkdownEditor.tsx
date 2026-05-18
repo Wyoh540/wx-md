@@ -172,6 +172,8 @@ const MarkdownEditor: React.FC = () => {
         previewMode={settings.previewMode || 'responsive'}
         togglePreviewMode={updatePreviewMode}
         copyAsWechat={handleCopyToWechat}
+        content={markdownText}
+        saveContent={saveContent}
       />
 
       {/* 主要内容区 */}
