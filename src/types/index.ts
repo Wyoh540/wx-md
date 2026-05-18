@@ -68,3 +68,49 @@ export interface ThemeStyles {
     footnotes?: React.CSSProperties;
   }
 }
+
+/**
+ * Electron API 类型定义
+ * 通过 contextBridge 暴露给渲染进程的 API 接口
+ */
+export interface ElectronAPI {
+  /**
+   * 打开本地 Markdown 文件
+   * @returns 文件内容，如果用户取消则返回 null
+   */
+  openFile(): Promise<string | null>;
+
+  /**
+   * 保存当前内容到文件
+   * @param content 要保存的 Markdown 内容
+   * @returns 是否保存成功
+   */
+  saveFile(content: string): Promise<boolean>;
+
+  /**
+   * 另存为文件
+   * @param content 要保存的 Markdown 内容
+   * @returns 是否保存成功
+   */
+  saveFileAs(content: string): Promise<boolean>;
+
+  /**
+   * 获取应用版本号
+   * @returns 版本字符串
+   */
+  getAppVersion(): Promise<string>;
+
+  /**
+   * 检查是否在 Electron 环境中运行
+   */
+  isElectron(): Promise<boolean>;
+}
+
+/**
+ * 扩展 Window 接口以包含 electronAPI
+ */
+declare global {
+  interface Window {
+    electronAPI?: ElectronAPI;
+  }
+}

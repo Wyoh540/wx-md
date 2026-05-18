@@ -8,6 +8,7 @@ import {
 } from '../config/config';
 import { ThemeType } from '../config/theme';
 import { PreviewMode, DropdownItem } from '../types';
+import { useElectronFile } from '../hooks/useElectronFile';
 
 /**
  * Toolbar组件属性接口
@@ -26,6 +27,8 @@ interface ToolbarProps {
   previewMode: PreviewMode;
   togglePreviewMode: (mode: PreviewMode) => void;
   copyAsWechat: () => void;
+  content: string;
+  saveContent: (content: string) => void;
 }
 
 /**
@@ -46,10 +49,19 @@ const Toolbar = ({
   setCodeTheme,
   previewMode,
   togglePreviewMode,
-  copyAsWechat
+  copyAsWechat,
+  content,
+  saveContent
 }: ToolbarProps) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+
+  const {
+    isElectron,
+    openFile,
+    saveFile,
+    saveFileAs,
+  } = useElectronFile(content);
 
   /**
    * 处理点击外部关闭下拉菜单
@@ -73,6 +85,37 @@ const Toolbar = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [activeDropdown]);
+
+  useEffect(() => {
+    if (!isElectron) return;
+
+    const handleMenuOpenFile = () => {
+      void (async () => {
+        const fileContent = await openFile();
+        if (fileContent !== null) {
+          saveContent(fileContent);
+        }
+      })();
+    };
+
+    const handleMenuSaveFile = () => {
+      void saveFile();
+    };
+
+    const handleMenuSaveFileAs = () => {
+      void saveFileAs();
+    };
+
+    window.addEventListener('menu-open-file', handleMenuOpenFile);
+    window.addEventListener('menu-save-file', handleMenuSaveFile);
+    window.addEventListener('menu-save-file-as', handleMenuSaveFileAs);
+
+    return () => {
+      window.removeEventListener('menu-open-file', handleMenuOpenFile);
+      window.removeEventListener('menu-save-file', handleMenuSaveFile);
+      window.removeEventListener('menu-save-file-as', handleMenuSaveFileAs);
+    };
+  }, [isElectron, openFile, saveFile, saveFileAs, saveContent]);
 
   /**
    * 切换下拉菜单的开关状态
@@ -222,6 +265,40 @@ const Toolbar = ({
       </div>
 
       <div className="toolbar-group">
+        {isElectron && (
+          <>
+            <button
+              onClick={() => {
+                void (async () => {
+                  const fileContent = await openFile();
+                  if (fileContent !== null) {
+                    saveContent(fileContent);
+                  }
+                })();
+              }}
+              title="打开文件 (Ctrl+O)"
+            >
+              打开
+            </button>
+            <button
+              onClick={() => {
+                void saveFile();
+              }}
+              title="保存文件 (Ctrl+S)"
+            >
+              保存
+            </button>
+            <button
+              onClick={() => {
+                void saveFileAs();
+              }}
+              title="另存为文件 (Ctrl+Shift+S)"
+            >
+              另存为
+            </button>
+            <div className="toolbar-divider"></div>
+          </>
+        )}
         {renderPreviewModeButtons()}
         <div className="toolbar-divider"></div>
         <button
