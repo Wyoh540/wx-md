@@ -6,7 +6,7 @@ import tseslint from '@typescript-eslint/eslint-plugin'
 import tsParser from '@typescript-eslint/parser'
 
 export default [
-  { ignores: ['dist', '.vite', 'out', '.worktrees'] },
+  { ignores: ['dist', 'src/renderer/dist', '.vite', 'out', '.worktrees'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {

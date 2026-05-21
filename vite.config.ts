@@ -22,4 +22,8 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.md', '**/*.min.css'],
   base: '/',
+  build: {
+    outDir: '../../dist',
+    emptyOutDir: true,
+  },
 });
