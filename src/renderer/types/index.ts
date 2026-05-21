@@ -91,14 +91,31 @@ export interface Tab {
  * 通过 contextBridge 暴露给渲染进程的 API 接口
  */
 export interface ElectronAPI {
+  /** 打开本地 Markdown 文件，返回文件内容，用户取消则返回 null */
   openFile(): Promise<string | null>;
+
+  /** 保存当前内容到已关联的文件路径 */
   saveFile(content: string): Promise<boolean>;
+
+  /** 弹出另存为对话框，保存到用户选择的路径 */
   saveFileAs(content: string): Promise<boolean>;
+
+  /** 获取应用版本号 */
   getAppVersion(): Promise<string>;
+
+  /** 检查是否在 Electron 环境中运行 */
   isElectron(): Promise<boolean>;
+
+  /** 弹出文件夹选择对话框，返回选中路径，取消则返回 null */
   openDirectory(): Promise<string | null>;
+
+  /** 递归读取目录结构，返回文件树节点数组 */
   readDirectory(dirPath: string): Promise<FileNode[]>;
+
+  /** 按路径读取文件内容，失败则返回 null */
   readFile(filePath: string): Promise<string | null>;
+
+  /** 按路径保存文件内容 */
   saveFileByPath(filePath: string, content: string): Promise<boolean>;
 }
 
