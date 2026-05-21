@@ -23,11 +23,11 @@ module.exports = {
       config: {
         build: [
           {
-            entry: 'electron/main.ts',
+            entry: 'src/main/index.ts',
             config: 'vite.main.config.ts',
           },
           {
-            entry: 'electron/preload.ts',
+            entry: 'src/preload/index.ts',
             config: 'vite.preload.config.ts',
           },
         ],
