@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Tab } from '@/types';
 
 /**
@@ -7,6 +7,12 @@ import type { Tab } from '@/types';
 export const useTabs = () => {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const tabsRef = useRef<Tab[]>(tabs);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
 
   const activeTab = tabs.find(t => t.id === activeTabId) ?? null;
 
@@ -14,7 +20,7 @@ export const useTabs = () => {
    * 打开文件为新标签，如已打开则激活对应标签
    */
   const openFile = useCallback(async (filePath: string) => {
-    const existing = tabs.find(t => t.filePath === filePath);
+    const existing = tabsRef.current.find(t => t.filePath === filePath);
     if (existing) {
       setActiveTabId(existing.id);
       return;
@@ -29,13 +35,13 @@ export const useTabs = () => {
 
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(id);
-  }, [tabs]);
+  }, []);
 
   /**
    * 关闭标签，如有未保存内容则弹出确认
    */
   const closeTab = useCallback((id: string) => {
-    const tab = tabs.find(t => t.id === id);
+    const tab = tabsRef.current.find(t => t.id === id);
     if (!tab) return;
 
     if (tab.isDirty) {
@@ -43,14 +49,15 @@ export const useTabs = () => {
       if (!confirmed) return;
     }
 
-    const remaining = tabs.filter(t => t.id !== id);
-    setTabs(remaining);
-    setActiveTabId(prev => {
-      if (prev !== id) return prev;
-      if (remaining.length === 0) return null;
-      return remaining[remaining.length - 1].id;
+    setTabs(prev => {
+      const remaining = prev.filter(t => t.id !== id);
+      setActiveTabId(curr => {
+        if (curr !== id) return curr;
+        return remaining.length > 0 ? remaining[remaining.length - 1].id : null;
+      });
+      return remaining;
     });
-  }, [tabs]);
+  }, []);
 
   /**
    * 更新标签内容，标记为已修改
@@ -65,7 +72,7 @@ export const useTabs = () => {
    * 保存标签到其原始路径
    */
   const saveTab = useCallback(async (id: string): Promise<boolean> => {
-    const tab = tabs.find(t => t.id === id);
+    const tab = tabsRef.current.find(t => t.id === id);
     if (!tab) return false;
 
     const success = await window.electronAPI?.saveFileByPath(tab.filePath, tab.content);
@@ -75,7 +82,7 @@ export const useTabs = () => {
       );
     }
     return success ?? false;
-  }, [tabs]);
+  }, []);
 
   return {
     tabs,
