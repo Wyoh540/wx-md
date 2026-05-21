@@ -6,21 +6,22 @@ const CLICKABLE_EXTENSIONS = /\.(md|markdown|txt)$/i;
 interface FileTreeNodeProps {
   node: FileNode;
   depth: number;
+  isExpanded: boolean;
   expandedPaths: Set<string>;
   onToggle: (path: string) => void;
   onFileClick: (path: string) => void;
   activeFilePath?: string;
 }
 
-const FileTreeNode: React.FC<FileTreeNodeProps> = ({
+const FileTreeNode: React.FC<FileTreeNodeProps> = React.memo(({
   node,
   depth,
+  isExpanded,
   expandedPaths,
   onToggle,
   onFileClick,
   activeFilePath,
 }) => {
-  const isExpanded = expandedPaths.has(node.path);
   const isActive = node.path === activeFilePath;
   const isClickable = node.type === 'file' && CLICKABLE_EXTENSIONS.test(node.name);
 
@@ -55,6 +56,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
           key={child.path}
           node={child}
           depth={depth + 1}
+          isExpanded={expandedPaths.has(child.path)}
           expandedPaths={expandedPaths}
           onToggle={onToggle}
           onFileClick={onFileClick}
@@ -63,7 +65,8 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
       ))}
     </div>
   );
-};
+});
+FileTreeNode.displayName = 'FileTreeNode';
 
 interface FileTreeProps {
   nodes: FileNode[];
@@ -87,6 +90,7 @@ const FileTree: React.FC<FileTreeProps> = ({
           key={node.path}
           node={node}
           depth={0}
+          isExpanded={expandedPaths.has(node.path)}
           expandedPaths={expandedPaths}
           onToggle={onToggle}
           onFileClick={onFileClick}

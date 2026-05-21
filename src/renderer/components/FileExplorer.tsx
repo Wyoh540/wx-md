@@ -65,7 +65,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ onFileOpen, activeFilePath 
         </div>
       )}
 
-      {rootPath && !isLoading && (
+      {rootPath && !isLoading && !error && (
         <FileTree
           nodes={tree}
           expandedPaths={expandedPaths}
