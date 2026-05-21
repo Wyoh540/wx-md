@@ -69,41 +69,37 @@ export interface ThemeStyles {
   }
 }
 
+// 文件树节点
+export interface FileNode {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  children?: FileNode[];
+}
+
+// 标签页
+export interface Tab {
+  id: string;
+  filePath: string;
+  title: string;
+  content: string;
+  isDirty: boolean;
+}
+
 /**
  * Electron API 类型定义
  * 通过 contextBridge 暴露给渲染进程的 API 接口
  */
 export interface ElectronAPI {
-  /**
-   * 打开本地 Markdown 文件
-   * @returns 文件内容，如果用户取消则返回 null
-   */
   openFile(): Promise<string | null>;
-
-  /**
-   * 保存当前内容到文件
-   * @param content 要保存的 Markdown 内容
-   * @returns 是否保存成功
-   */
   saveFile(content: string): Promise<boolean>;
-
-  /**
-   * 另存为文件
-   * @param content 要保存的 Markdown 内容
-   * @returns 是否保存成功
-   */
   saveFileAs(content: string): Promise<boolean>;
-
-  /**
-   * 获取应用版本号
-   * @returns 版本字符串
-   */
   getAppVersion(): Promise<string>;
-
-  /**
-   * 检查是否在 Electron 环境中运行
-   */
   isElectron(): Promise<boolean>;
+  openDirectory(): Promise<string | null>;
+  readDirectory(dirPath: string): Promise<FileNode[]>;
+  readFile(filePath: string): Promise<string | null>;
+  saveFileByPath(filePath: string, content: string): Promise<boolean>;
 }
 
 /**
