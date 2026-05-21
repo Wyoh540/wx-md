@@ -15,6 +15,14 @@ export function createMenu(mainWindow: BrowserWindow | null): Menu {
             mainWindow?.webContents.send('menu-open-file');
           },
         },
+        {
+          label: '打开文件夹...',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: () => {
+            if (!mainWindow) return;
+            mainWindow.webContents.send('menu-open-directory');
+          },
+        },
         { type: 'separator' },
         {
           label: '保存',

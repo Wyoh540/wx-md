@@ -126,3 +126,75 @@ ipcMain.handle('save-file-as', async (_event, content: string) => {
 
 ipcMain.handle('get-app-version', async () => app.getVersion());
 ipcMain.handle('is-electron', async () => true);
+
+/**
+ * IPC: 打开文件夹选择对话框
+ */
+ipcMain.handle('open-directory', async () => {
+  if (!mainWindow) return null;
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
+
+/**
+ * IPC: 递归读取目录结构
+ */
+ipcMain.handle('read-directory', async (_event, dirPath: string) => {
+  interface FileNode {
+    name: string;
+    path: string;
+    type: 'file' | 'directory';
+    children?: FileNode[];
+  }
+
+  const readDir = async (currentPath: string): Promise<FileNode[]> => {
+    try {
+      const entries = await fs.readdir(currentPath, { withFileTypes: true });
+      const nodes: FileNode[] = [];
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+        const fullPath = path.join(currentPath, entry.name);
+        if (entry.isDirectory()) {
+          const children = await readDir(fullPath);
+          nodes.push({ name: entry.name, path: fullPath, type: 'directory', children });
+        } else {
+          nodes.push({ name: entry.name, path: fullPath, type: 'file' });
+        }
+      }
+      return nodes.sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    } catch {
+      return [];
+    }
+  };
+
+  return readDir(dirPath);
+});
+
+/**
+ * IPC: 按路径读取文件内容
+ */
+ipcMain.handle('read-file', async (_event, filePath: string) => {
+  try {
+    return await fs.readFile(filePath, 'utf-8');
+  } catch {
+    return null;
+  }
+});
+
+/**
+ * IPC: 按路径保存文件内容
+ */
+ipcMain.handle('save-file-by-path', async (_event, filePath: string, content: string) => {
+  try {
+    await fs.writeFile(filePath, content, 'utf-8');
+    return true;
+  } catch {
+    return false;
+  }
+});
