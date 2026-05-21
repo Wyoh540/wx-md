@@ -150,17 +150,18 @@ ipcMain.handle('read-directory', async (_event, dirPath: string) => {
     children?: FileNode[];
   }
 
-  const readDir = async (currentPath: string): Promise<FileNode[]> => {
+  const readDir = async (currentPath: string, depth = 0): Promise<FileNode[]> => {
+    if (depth > 15) return [];
     try {
       const entries = await fs.readdir(currentPath, { withFileTypes: true });
       const nodes: FileNode[] = [];
       for (const entry of entries) {
         if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
         const fullPath = path.join(currentPath, entry.name);
-        if (entry.isDirectory()) {
-          const children = await readDir(fullPath);
+        if (entry.isDirectory() && !entry.isSymbolicLink()) {
+          const children = await readDir(fullPath, depth + 1);
           nodes.push({ name: entry.name, path: fullPath, type: 'directory', children });
-        } else {
+        } else if (!entry.isDirectory()) {
           nodes.push({ name: entry.name, path: fullPath, type: 'file' });
         }
       }
@@ -168,7 +169,8 @@ ipcMain.handle('read-directory', async (_event, dirPath: string) => {
         if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
         return a.name.localeCompare(b.name);
       });
-    } catch {
+    } catch (error) {
+      console.error('读取目录失败:', error);
       return [];
     }
   };
@@ -182,7 +184,8 @@ ipcMain.handle('read-directory', async (_event, dirPath: string) => {
 ipcMain.handle('read-file', async (_event, filePath: string) => {
   try {
     return await fs.readFile(filePath, 'utf-8');
-  } catch {
+  } catch (error) {
+    console.error('按路径读取文件失败:', error);
     return null;
   }
 });
@@ -194,7 +197,8 @@ ipcMain.handle('save-file-by-path', async (_event, filePath: string, content: st
   try {
     await fs.writeFile(filePath, content, 'utf-8');
     return true;
-  } catch {
+  } catch (error) {
+    console.error('按路径保存文件失败:', error);
     return false;
   }
 });
