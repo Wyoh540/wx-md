@@ -11,5 +11,13 @@ export default defineConfig((env) => {
         '@': srcPath,
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].cjs',
+        },
+      },
+    },
   });
 });
