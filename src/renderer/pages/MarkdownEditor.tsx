@@ -14,6 +14,15 @@ import { useCopy } from '../hooks/useCopy'
 import { useStore } from '../hooks/useStore'
 import { useTabs } from '../hooks/useTabs'
 import Notification from '../components/Notification'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 const MarkdownEditorWithTheme: React.FC = () => {
   return (
@@ -55,9 +64,12 @@ const MarkdownEditor: React.FC = () => {
     tabs,
     activeTabId,
     activeTab,
+    confirmDialog,
     setActiveTabId,
     openFile: openTabFile,
-    closeTab,
+    requestCloseTab,
+    confirmCloseTab,
+    cancelCloseTab,
     setTabContent,
     saveTab,
   } = useTabs();
@@ -132,7 +144,7 @@ const MarkdownEditor: React.FC = () => {
   }, [markdownText, getThemeConfig, getFontFamily, getFontSize]);
 
   return (
-    <div className="editor-container">
+    <div className="flex flex-col h-screen bg-background">
       <Notification
         visible={notification.visible}
         message={notification.message}
@@ -161,11 +173,17 @@ const MarkdownEditor: React.FC = () => {
         saveContent={saveContent}
       />
 
-      {/* 工具栏以下的主体区域：侧边栏 + 编辑主区 */}
-      <div className="editor-body">
-        {/* 侧边栏（仅 Electron） */}
+      {/* 主体区域 */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* 侧边栏 */}
         {isElectron && (
-          <div className={`sidebar${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+          <div
+            className={
+              sidebarCollapsed
+                ? 'w-0 overflow-hidden'
+                : 'w-60 min-w-[240px] flex flex-col border-r'
+            }
+          >
             {!sidebarCollapsed && (
               <FileExplorer
                 onFileOpen={(filePath) => void openTabFile(filePath)}
@@ -175,10 +193,10 @@ const MarkdownEditor: React.FC = () => {
           </div>
         )}
 
-        {/* 侧边栏折叠 toggle（仅 Electron） */}
+        {/* 侧边栏折叠按钮 */}
         {isElectron && (
           <button
-            className="sidebar-toggle"
+            className="flex items-center justify-center w-3.5 bg-muted border-r hover:bg-accent transition-colors text-muted-foreground text-xs"
             onClick={() => setSidebarCollapsed(v => !v)}
             title={sidebarCollapsed ? '展开资源管理器' : '折叠资源管理器'}
           >
@@ -186,19 +204,20 @@ const MarkdownEditor: React.FC = () => {
           </button>
         )}
 
-        {/* 编辑主区：标签栏 + 编辑器 + 预览 */}
-        <div className="editor-main">
+        {/* 编辑主区 */}
+        <div className="flex flex-col flex-1 overflow-hidden min-h-0">
           {isElectron && (
             <TabBar
               tabs={tabs}
               activeTabId={activeTabId}
               onSelect={setActiveTabId}
-              onClose={closeTab}
+              onClose={requestCloseTab}
             />
           )}
 
-          <div className="editor-content">
-            <div className="editor-pane">
+          <div className="flex flex-1 overflow-hidden min-h-0">
+            {/* 编辑器 */}
+            <div className="w-1/2 h-full flex flex-col overflow-hidden border-r">
               <CodeMirror
                 ref={editorRef}
                 value={markdownText}
@@ -209,15 +228,23 @@ const MarkdownEditor: React.FC = () => {
                   EditorView.lineWrapping,
                 ]}
                 onChange={handleContentChange}
+                className="flex-1 h-full [&_.cm-editor]:border-0 [&_.cm-editor]:shadow-none [&_.cm-content]:p-4"
               />
             </div>
 
+            {/* 预览区 */}
             <div
               id="preview"
               ref={previewRef}
-              className="preview-pane"
+              className="w-1/2 h-full overflow-auto bg-background"
             >
-              <div className={`preview-wrapper ${settings.previewMode === 'mobile' ? 'mobile-preview' : 'wide-preview'}`}>
+              <div
+                className={
+                  settings.previewMode === 'mobile'
+                    ? 'w-[375px] mx-auto min-h-full p-4 border-x shadow-sm bg-background'
+                    : 'max-w-[900px] mx-auto min-h-full p-4 border-x shadow-sm bg-background'
+                }
+              >
                 <div
                   id="output"
                   className="markdown-preview"
@@ -228,6 +255,26 @@ const MarkdownEditor: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 未保存关闭确认对话框 */}
+      <Dialog open={!!confirmDialog} onOpenChange={(open) => !open && cancelCloseTab()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>关闭未保存文件</DialogTitle>
+            <DialogDescription>
+              {confirmDialog && `"${confirmDialog.title}" 有未保存的更改，确定关闭？`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelCloseTab}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={confirmCloseTab}>
+              关闭且不保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

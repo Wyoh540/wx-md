@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import React from 'react';
+import { toast } from 'sonner';
 
 interface NotificationProps {
   message: string;
@@ -9,28 +9,25 @@ interface NotificationProps {
 }
 
 /**
- * 通知组件
- * 显示成功或错误消息，2秒后自动消失
+ * 通知组件（已迁移至 Sonner Toast）
+ * 保持原有接口以兼容上层调用，内部通过 Sonner 展示
  */
-const Notification: React.FC<NotificationProps> = ({ message, type, visible, onClose }) => {
+const Notification = ({ message, type, visible, onClose }: NotificationProps) => {
   useEffect(() => {
-    if (visible) {
-      // 2秒后自动关闭
-      const timer = setTimeout(() => {
-        onClose();
-      }, 2000);
+    if (!visible) return;
 
-      return () => clearTimeout(timer);
-    }
-  }, [visible, onClose]);
+    const id = toast[type](message, {
+      duration: 2000,
+      onDismiss: onClose,
+      onAutoClose: onClose,
+    });
 
-  if (!visible) return null;
+    return () => {
+      toast.dismiss(id);
+    };
+  }, [visible, message, type, onClose]);
 
-  return (
-    <div className={`notification ${type}`}>
-      {message}
-    </div>
-  );
+  return null;
 };
 
 export default Notification;

@@ -1,5 +1,7 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 import type { FileNode } from '@/types';
+import { FileText, ChevronRight, ChevronDown } from 'lucide-react';
 
 const CLICKABLE_EXTENSIONS = /\.(md|markdown|txt)$/i;
 
@@ -30,26 +32,28 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = React.memo(({
     else if (isClickable) onFileClick(node.path);
   };
 
-  const nodeClasses = [
-    'file-tree-node',
-    isActive ? 'file-tree-node-active' : '',
-    node.type === 'file' && !isClickable ? 'file-tree-node-disabled' : '',
-  ].filter(Boolean).join(' ');
-
   return (
     <div>
       <div
-        className={nodeClasses}
+        className={cn(
+          "flex items-center gap-1 rounded-sm py-1 cursor-pointer select-none text-sm mx-1",
+          isActive && "bg-primary/10 text-primary font-medium",
+          node.type === 'file' && !isClickable && "text-muted-foreground cursor-default",
+          !isActive && node.type !== 'file' && "hover:bg-accent hover:text-accent-foreground",
+          !isActive && node.type === 'file' && isClickable && "hover:bg-accent hover:text-accent-foreground"
+        )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
         onClick={handleClick}
         title={node.path}
       >
-        <span className="file-tree-icon">
-          {node.type === 'directory'
-            ? (isExpanded ? '▾' : '▸')
-            : '·'}
+        <span className="flex-shrink-0 w-4 flex items-center justify-center text-muted-foreground">
+          {node.type === 'directory' ? (
+            isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />
+          ) : (
+            <FileText className="h-3.5 w-3.5" />
+          )}
         </span>
-        <span className="file-tree-name">{node.name}</span>
+        <span className="truncate">{node.name}</span>
       </div>
       {node.type === 'directory' && isExpanded && node.children?.map(child => (
         <FileTreeNode
@@ -84,7 +88,7 @@ const FileTree: React.FC<FileTreeProps> = ({
   activeFilePath,
 }) => {
   return (
-    <div className="file-tree">
+    <div className="py-1">
       {nodes.map(node => (
         <FileTreeNode
           key={node.path}

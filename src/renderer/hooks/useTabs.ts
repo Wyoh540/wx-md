@@ -1,12 +1,18 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Tab } from '@/types';
 
+interface ConfirmDialogState {
+  id: string;
+  title: string;
+}
+
 /**
  * 多标签页状态管理 Hook
  */
 export const useTabs = () => {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const tabsRef = useRef<Tab[]>(tabs);
 
   // Keep ref in sync with state
@@ -38,17 +44,9 @@ export const useTabs = () => {
   }, []);
 
   /**
-   * 关闭标签，如有未保存内容则弹出确认
+   * 内部关闭标签（不弹确认）
    */
-  const closeTab = useCallback((id: string) => {
-    const tab = tabsRef.current.find(t => t.id === id);
-    if (!tab) return;
-
-    if (tab.isDirty) {
-      const confirmed = window.confirm(`"${tab.title}" 有未保存的更改，确定关闭？`);
-      if (!confirmed) return;
-    }
-
+  const doCloseTab = useCallback((id: string) => {
     setTabs(prev => {
       const remaining = prev.filter(t => t.id !== id);
       setActiveTabId(curr => {
@@ -57,6 +55,36 @@ export const useTabs = () => {
       });
       return remaining;
     });
+  }, []);
+
+  /**
+   * 请求关闭标签，如有未保存内容则设置确认对话框状态
+   */
+  const requestCloseTab = useCallback((id: string) => {
+    const tab = tabsRef.current.find(t => t.id === id);
+    if (!tab) return;
+
+    if (tab.isDirty) {
+      setConfirmDialog({ id, title: tab.title });
+    } else {
+      doCloseTab(id);
+    }
+  }, [doCloseTab]);
+
+  /**
+   * 确认关闭未保存标签
+   */
+  const confirmCloseTab = useCallback(() => {
+    if (!confirmDialog) return;
+    doCloseTab(confirmDialog.id);
+    setConfirmDialog(null);
+  }, [confirmDialog, doCloseTab]);
+
+  /**
+   * 取消关闭标签
+   */
+  const cancelCloseTab = useCallback(() => {
+    setConfirmDialog(null);
   }, []);
 
   /**
@@ -88,9 +116,12 @@ export const useTabs = () => {
     tabs,
     activeTabId,
     activeTab,
+    confirmDialog,
     setActiveTabId,
     openFile,
-    closeTab,
+    requestCloseTab,
+    confirmCloseTab,
+    cancelCloseTab,
     setTabContent,
     saveTab,
   };

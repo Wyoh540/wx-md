@@ -2,7 +2,6 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'path';
 import { promises as fs } from 'fs';
 import started from 'electron-squirrel-startup';
-import { createMenu } from './menu';
 import { getPreloadScriptPath } from './preloadPath';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
@@ -35,8 +34,6 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
-
-  createMenu(mainWindow);
 
   mainWindow.on('closed', () => {
     mainWindow = null;

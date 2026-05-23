@@ -1,4 +1,3 @@
-import { useRef, useState, useEffect } from 'react';
 import {
   themeOptions,
   fontFamilyOptions,
@@ -9,10 +8,41 @@ import {
 import { ThemeType } from '../config/theme';
 import { PreviewMode, DropdownItem } from '../types';
 import { useElectronFile } from '../hooks/useElectronFile';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Separator } from '@/components/ui/separator';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import {
+  Monitor,
+  Smartphone,
+  Maximize,
+  Copy,
+  FolderOpen,
+  Save,
+  FileOutput,
+  Check,
+  Palette,
+  Type,
+  Heading,
+  Paintbrush,
+  Code,
+  Info,
+  ChevronDown,
+} from 'lucide-react';
 
-/**
- * Toolbar组件属性接口
- */
 interface ToolbarProps {
   currentTheme: ThemeType;
   setCurrentTheme: (theme: ThemeType) => void;
@@ -31,11 +61,6 @@ interface ToolbarProps {
   saveContent: (content: string) => void;
 }
 
-/**
- * 工具栏组件
- * 提供主题、字体、字号、主题色、代码主题等设置功能
- * 以及预览模式切换和复制为微信公众号格式功能
- */
 const Toolbar = ({
   currentTheme,
   setCurrentTheme,
@@ -53,9 +78,6 @@ const Toolbar = ({
   content,
   saveContent
 }: ToolbarProps) => {
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const toolbarRef = useRef<HTMLDivElement>(null);
-
   const {
     isElectron,
     openFile,
@@ -63,90 +85,7 @@ const Toolbar = ({
     saveFileAs,
   } = useElectronFile(content);
 
-  /**
-   * 处理点击外部关闭下拉菜单
-   */
-  useEffect(() => {
-    if (!activeDropdown) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      const activeButton = document.querySelector(`.dropdown-button[data-menu="${activeDropdown}"]`);
-      const activeMenu = document.querySelector(`.dropdown-menu[data-menu="${activeDropdown}"]`);
-
-      const isClickOnActiveButton = activeButton?.contains(target);
-      const isClickInActiveMenu = activeMenu?.contains(target);
-
-      if (!isClickOnActiveButton && !isClickInActiveMenu) {
-        setActiveDropdown(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [activeDropdown]);
-
-  useEffect(() => {
-    if (!isElectron) return;
-
-    const handleMenuOpenFile = () => {
-      void (async () => {
-        const fileContent = await openFile();
-        if (fileContent !== null) {
-          saveContent(fileContent);
-        }
-      })();
-    };
-
-    const handleMenuSaveFile = () => {
-      void saveFile();
-    };
-
-    const handleMenuSaveFileAs = () => {
-      void saveFileAs();
-    };
-
-    window.addEventListener('menu-open-file', handleMenuOpenFile);
-    window.addEventListener('menu-save-file', handleMenuSaveFile);
-    window.addEventListener('menu-save-file-as', handleMenuSaveFileAs);
-
-    return () => {
-      window.removeEventListener('menu-open-file', handleMenuOpenFile);
-      window.removeEventListener('menu-save-file', handleMenuSaveFile);
-      window.removeEventListener('menu-save-file-as', handleMenuSaveFileAs);
-    };
-  }, [isElectron, openFile, saveFile, saveFileAs, saveContent]);
-
-  /**
-   * 切换下拉菜单的开关状态
-   * @param menu 菜单名称
-   */
-  const handleToggleDropdown = (menu: string) => {
-    setActiveDropdown(activeDropdown === menu ? null : menu);
-  };
-
-  /**
-   * 处理下拉菜单项点击
-   * @param action 点击后执行的操作函数
-   */
-  const handleMenuItemClick = (action: (() => void) | undefined) => {
-    if (action) action();
-    setActiveDropdown(null);
-  };
-
-  /**
-   * 处理链接类型菜单项点击
-   * @param url 要跳转的URL
-   */
-  const handleLinkClick = (url: string) => {
-    window.open(url, '_blank');
-    setActiveDropdown(null);
-  };
-
-  /**
-   * 各种样式操作的配置
-   */
-  const menuConfigurations = {
+  const menuConfigurations: Record<string, DropdownItem[]> = {
     '主题': themeOptions.map(option => ({
       label: option.label,
       action: () => setCurrentTheme(option.value as ThemeType),
@@ -182,134 +121,173 @@ const Toolbar = ({
     ]
   };
 
-  /**
-   * 渲染下拉菜单
-   * @param menuName 菜单名称
-   * @param items 菜单项配置
-   */
-  const renderDropdownMenu = (menuName: string, items: DropdownItem[]) => (
-    <div className="dropdown">
-      <button
-        className={`dropdown-button ${activeDropdown === menuName ? 'active' : ''}`}
-        onClick={() => handleToggleDropdown(menuName)}
-        data-menu={menuName}
-      >
-        {menuName}
-      </button>
-      {activeDropdown === menuName && (
-        <div className="dropdown-menu" data-menu={menuName}>
-          {items.map((item, index) => (
-            <div
-              key={index}
-              className={`dropdown-item ${item.checked ? 'checked' : ''}`}
-              onClick={() => item.isLink && item.url ? handleLinkClick(item.url) : handleMenuItemClick(item.action)}
-            >
-              {menuName === '主题色' ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div
-                    style={{
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '50%',
-                      backgroundColor: item.value,
-                    }}
-                  ></div>
-                  <span>{item.label}</span>
-                </div>
-              ) : (
-                <span>{item.label}</span>
-              )}
-              {item.checked && <span>✓</span>}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  const handleLinkClick = (url: string) => {
+    window.open(url, '_blank');
+  };
 
-  /**
-   * 渲染预览模式切换按钮组
-   */
-  const renderPreviewModeButtons = () => (
-    <div className="preview-mode-group">
-      <button
-        className={`preview-mode-button ${previewMode === 'responsive' ? 'active' : ''}`}
-        onClick={() => togglePreviewMode('responsive')}
-        title="响应式预览"
-      >
-        自适应
-      </button>
-      <button
-        className={`preview-mode-button ${previewMode === 'mobile' ? 'active' : ''}`}
-        onClick={() => togglePreviewMode('mobile')}
-        title="移动设备预览 (375px)"
-      >
-        手机
-      </button>
-      <button
-        className={`preview-mode-button ${previewMode === 'wide' ? 'active' : ''}`}
-        onClick={() => togglePreviewMode('wide')}
-        title="宽屏预览 (800px)"
-      >
-        宽屏
-      </button>
-    </div>
-  );
+  const getMenuIcon = (menuName: string) => {
+    switch (menuName) {
+      case '主题': return <Palette className="mr-2 h-4 w-4" />;
+      case '字体': return <Type className="mr-2 h-4 w-4" />;
+      case '字号': return <Heading className="mr-2 h-4 w-4" />;
+      case '主题色': return <Paintbrush className="mr-2 h-4 w-4" />;
+      case '代码主题': return <Code className="mr-2 h-4 w-4" />;
+      case '关于': return <Info className="mr-2 h-4 w-4" />;
+      default: return null;
+    }
+  };
+
+  const previewModes: { mode: PreviewMode; label: string; icon: React.ReactNode; title: string }[] = [
+    { mode: 'responsive', label: '自适应', icon: <Monitor className="h-4 w-4" />, title: '响应式预览' },
+    { mode: 'mobile', label: '手机', icon: <Smartphone className="h-4 w-4" />, title: '移动设备预览 (375px)' },
+    { mode: 'wide', label: '宽屏', icon: <Maximize className="h-4 w-4" />, title: '宽屏预览' },
+  ];
 
   return (
-    <header className="editor-header" ref={toolbarRef}>
-      <div className="toolbar-group">
-        {Object.entries(menuConfigurations).map(([menuName, items]) =>
-          renderDropdownMenu(menuName, items)
-        )}
-      </div>
+    <TooltipProvider>
+      <header
+        className="flex items-center justify-between px-4 h-[60px] border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50"
+      >
+        {/* 左侧：样式菜单组 */}
+        <div className="flex items-center gap-1">
+          {Object.entries(menuConfigurations).map(([menuName, items]) => (
+            <DropdownMenu key={menuName}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1">
+                  {getMenuIcon(menuName)}
+                  {menuName}
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[180px]">
+                <DropdownMenuLabel>{menuName}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {items.map((item, index) => (
+                  <DropdownMenuItem
+                    key={index}
+                    onClick={() => {
+                      if (item.isLink && item.url) {
+                        handleLinkClick(item.url);
+                      } else {
+                        item.action?.();
+                      }
+                    }}
+                    className="justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      {menuName === '主题色' && item.value && (
+                        <div
+                          className="h-4 w-4 rounded-full border"
+                          style={{ backgroundColor: item.value }}
+                        />
+                      )}
+                      <span>{item.label}</span>
+                    </div>
+                    {item.checked && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ))}
+        </div>
 
-      <div className="toolbar-group">
-        {isElectron && (
-          <>
-            <button
-              onClick={() => {
-                void (async () => {
-                  const fileContent = await openFile();
-                  if (fileContent !== null) {
-                    saveContent(fileContent);
-                  }
-                })();
-              }}
-              title="打开文件 (Ctrl+O)"
-            >
-              打开
-            </button>
-            <button
-              onClick={() => {
-                void saveFile();
-              }}
-              title="保存文件 (Ctrl+S)"
-            >
-              保存
-            </button>
-            <button
-              onClick={() => {
-                void saveFileAs();
-              }}
-              title="另存为文件 (Ctrl+Shift+S)"
-            >
-              另存为
-            </button>
-            <div className="toolbar-divider"></div>
-          </>
-        )}
-        {renderPreviewModeButtons()}
-        <div className="toolbar-divider"></div>
-        <button
-          className="copy-button"
-          onClick={copyAsWechat}
-          title="复制为公众号格式"
-        >
-          复制
-        </button>
-      </div>
-    </header>
+        {/* 右侧：操作组 */}
+        <div className="flex items-center gap-1">
+          {isElectron && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      void (async () => {
+                        const fileContent = await openFile();
+                        if (fileContent !== null) {
+                          saveContent(fileContent);
+                        }
+                      })();
+                    }}
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>打开文件 (Ctrl+O)</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void saveFile()}
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>保存文件 (Ctrl+S)</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void saveFileAs()}
+                  >
+                    <FileOutput className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>另存为 (Ctrl+Shift+S)</TooltipContent>
+              </Tooltip>
+
+              <Separator orientation="vertical" className="mx-1 h-6" />
+            </>
+          )}
+
+          {/* 预览模式 */}
+          <div className="flex items-center rounded-md border bg-muted p-1">
+            {previewModes.map(({ mode, label, icon, title }) => (
+              <Tooltip key={mode}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={previewMode === mode ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => togglePreviewMode(mode)}
+                    className={cn(
+                      "h-7 gap-1 px-2 text-xs",
+                      previewMode === mode && "bg-background shadow-sm"
+                    )}
+                  >
+                    {icon}
+                    {label}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{title}</TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+
+          <Separator orientation="vertical" className="mx-1 h-6" />
+
+          {/* 复制按钮 */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={copyAsWechat}
+                className="gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Copy className="h-4 w-4" />
+                复制
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>复制为公众号格式</TooltipContent>
+          </Tooltip>
+        </div>
+      </header>
+    </TooltipProvider>
   );
 };
 

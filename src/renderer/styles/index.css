@@ -1,70 +1,97 @@
-/* 全局变量 */
-:root {
-  /* 主题变量 */
-  --md-theme-color: #0F4C81; /* Markdown主题色 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  /* 颜色系统 */
-  --color-primary: #0F4C81;  /* 经典蓝 */
-  --color-primary-rgb: 15, 76, 129;
-  --color-success: #009874;  /* 翡翠绿 */
-  --color-warning: #FECE00;  /* 柠檬黄 */
-  --color-danger: #FA5151;   /* 活力橘 */
-  --color-info: #55C9EA;     /* 天空蓝 */
+@layer base {
+  :root {
+    --md-theme-color: #0F4C81;
 
-  /* 中性色 */
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
 
-  --bg-primary: #ffffff;
-  --bg-secondary: #ffffff;
-  --bg-editor: #ffffff;
-  --bg-preview: #ffffff;
+    /* Legacy color system preserved for compatibility */
+    --color-primary: #0F4C81;
+    --color-primary-rgb: 15, 76, 129;
+    --color-success: #009874;
+    --color-warning: #FECE00;
+    --color-danger: #FA5151;
+    --color-info: #55C9EA;
 
-  --text-primary: #1f2937;
-  --text-secondary: #4b5563;
-  --text-muted: #6b7280;
+    --color-gray-50: #f9fafb;
+    --color-gray-100: #f3f4f6;
+    --color-gray-200: #e5e7eb;
+    --color-gray-300: #d1d5db;
+    --color-gray-400: #9ca3af;
+    --color-gray-500: #6b7280;
+    --color-gray-600: #4b5563;
+    --color-gray-700: #374151;
+    --color-gray-800: #1f2937;
+    --color-gray-900: #111827;
 
-  --border-color: #e5e7eb;
-  --border-hover: #d1d5db;
-  --border-focus: #0F4C81;
+    --bg-primary: #ffffff;
+    --bg-secondary: #ffffff;
+    --bg-editor: #ffffff;
+    --bg-preview: #ffffff;
 
-  /* 字体系统 */
-  --font-family-base: mp-quote, PingFang SC, system-ui, -apple-system, BlinkMacSystemFont, Helvetica Neue, Hiragino Sans GB, Microsoft YaHei UI, Microsoft YaHei, Arial, sans-serif;
+    --text-primary: #1f2937;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
 
-  /* 字号系统 */
-  --font-size-base: 14px;
+    --border-color: #e5e7eb;
+    --border-hover: #d1d5db;
+    --border-focus: #0F4C81;
 
-  /* 间距系统 */
-  --spacing-1: 4px;
-  --spacing-2: 8px;
-  --spacing-3: 12px;
-  --spacing-4: 16px;
-  --spacing-5: 20px;
-  --spacing-6: 24px;
+    --font-family-base: mp-quote, PingFang SC, system-ui, -apple-system, BlinkMacSystemFont, Helvetica Neue, Hiragino Sans GB, Microsoft YaHei UI, Microsoft YaHei, Arial, sans-serif;
+    --font-size-base: 14px;
 
-  /* 圆角 */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
+    --spacing-1: 4px;
+    --spacing-2: 8px;
+    --spacing-3: 12px;
+    --spacing-4: 16px;
+    --spacing-5: 20px;
+    --spacing-6: 24px;
 
-  /* 阴影 */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 8px;
 
-  /* 布局变量 */
-  --header-height: 60px;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+    --header-height: 60px;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
+  }
 }
 
-/* 通知组件样式 */
+/* Legacy notification styles preserved during transition */
 .notification {
   position: fixed;
   top: 20px;
