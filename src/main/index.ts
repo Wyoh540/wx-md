@@ -3,6 +3,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import started from 'electron-squirrel-startup';
 import { createMenu } from './menu';
+import { getPreloadScriptPath } from './preloadPath';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -21,7 +22,7 @@ function createWindow(): void {
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: getPreloadScriptPath(__dirname),
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: process.env.NODE_ENV !== 'development',

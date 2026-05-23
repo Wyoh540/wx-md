@@ -1,11 +1,13 @@
 /* CodeMirror6 编辑器样式 */
 .cm-editor {
+  flex: 1;
   height: 100%;
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   border: 1px solid var(--border-color, #ffffff);
   border-top: none;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
 /* 移除编辑器获取焦点时的虚线边框 */
@@ -46,13 +48,16 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* 编辑器面板 */
 .editor-pane {
   width: 50%;
   height: 100%;
-
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 预览面板 */
@@ -267,6 +272,7 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* ===== 侧边栏 ===== */
