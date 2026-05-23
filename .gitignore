@@ -27,6 +27,12 @@ dist-ssr
 .worktrees/
 .vite/
 
+# AI / build artifacts
+.claude/
+.omo/
+docs/superpowers/
+*.tgz
+
 assets/*.ico
 assets/*.gif
 !assets/.gitkeep
