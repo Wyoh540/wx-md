@@ -13,6 +13,8 @@ import { useTheme, ThemeProvider } from '../contexts/ThemeContext'
 import { useCopy } from '../hooks/useCopy'
 import { useStore } from '../hooks/useStore'
 import { useTabs } from '../hooks/useTabs'
+import { useFileTree } from '../hooks/useFileTree'
+import { useWorkspaceState } from '../hooks/useWorkspaceState'
 import { useWeChatDraft } from '@/hooks/useWeChatDraft'
 import { useWeChatConfig } from '@/hooks/useWeChatConfig'
 import WeChatUploadDialog from '@/components/WeChatUploadDialog'
@@ -79,6 +81,22 @@ const MarkdownEditor: React.FC = () => {
 
   const { copyToWechat } = useCopy();
 
+  const {
+    rootPath,
+    tree,
+    expandedPaths,
+    isLoading: fileTreeLoading,
+    error: fileTreeError,
+    openFolder,
+    toggleExpand,
+    refresh,
+    loadDirectory,
+    createFile,
+    createFolder,
+  } = useFileTree();
+
+  const { loadWorkspaceState, saveWorkspaceState, onSaveWorkspaceState } = useWorkspaceState();
+
   const [notification, setNotification] = useState<{
     visible: boolean;
     message: string;
@@ -113,6 +131,48 @@ const MarkdownEditor: React.FC = () => {
       setTheme(settings.currentTheme);
     }
   }, [isLoaded, settings, setFontFamily, setFontSize, setPrimaryColor, setTheme]);
+
+  // 恢复工作区状态
+  useEffect(() => {
+    const restoreWorkspace = async () => {
+      const state = await loadWorkspaceState();
+      if (!state) return;
+
+      // 恢复目录
+      if (state.rootPath) {
+        try {
+          await loadDirectory(state.rootPath);
+        } catch {
+          console.warn('工作区目录已不存在:', state.rootPath);
+        }
+      }
+
+      // 恢复标签页
+      if (state.openFilePaths && state.openFilePaths.length > 0) {
+        for (const filePath of state.openFilePaths) {
+          await openTabFile(filePath);
+        }
+      }
+    };
+
+    void restoreWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 保存工作区状态并关闭窗口
+  useEffect(() => {
+    const unsubscribe = onSaveWorkspaceState(async () => {
+      const state = {
+        rootPath: rootPath ?? null,
+        openFilePaths: tabs.map(t => t.filePath),
+        activeFilePath: activeTab?.filePath ?? null,
+      };
+      await saveWorkspaceState(state);
+      await window.electronAPI?.closeWindow();
+    });
+
+    return unsubscribe;
+  }, [rootPath, tabs, activeTab, saveWorkspaceState, onSaveWorkspaceState]);
 
   const handleContentChange = useCallback((value: string) => {
     if (activeTabId) {
@@ -202,6 +262,16 @@ const MarkdownEditor: React.FC = () => {
               <FileExplorer
                 onFileOpen={(filePath) => void openTabFile(filePath)}
                 activeFilePath={activeTab?.filePath}
+                rootPath={rootPath}
+                tree={tree}
+                expandedPaths={expandedPaths}
+                isLoading={fileTreeLoading}
+                error={fileTreeError}
+                openFolder={() => void openFolder()}
+                toggleExpand={toggleExpand}
+                refresh={refresh}
+                createFile={createFile}
+                createFolder={createFolder}
               />
             )}
           </div>

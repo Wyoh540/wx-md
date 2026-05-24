@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'path';
+import os from 'os';
 import { promises as fs } from 'fs';
 import started from 'electron-squirrel-startup';
 import { getPreloadScriptPath } from './preloadPath';
@@ -40,6 +41,13 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
+
+  mainWindow.on('close', (event) => {
+    if (mainWindow) {
+      event.preventDefault();
+      mainWindow.webContents.send('save-workspace-state');
+    }
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -232,3 +240,67 @@ ipcMain.handle('wechat-read-config', async () => wechatReadConfig());
  * IPC: 写入微信配置
  */
 ipcMain.handle('wechat-write-config', async (_event, config) => wechatWriteConfig(config));
+
+/**
+ * IPC: 关闭窗口
+ */
+ipcMain.handle('close-window', () => {
+  if (mainWindow) {
+    mainWindow.destroy();
+    mainWindow = null;
+  }
+});
+
+/**
+ * IPC: 创建文件
+ */
+ipcMain.handle('create-file', async (_event, dirPath: string, fileName: string) => {
+  const filePath = path.join(dirPath, fileName);
+  try {
+    await fs.writeFile(filePath, '', 'utf-8');
+    return filePath;
+  } catch {
+    return null;
+  }
+});
+
+/**
+ * IPC: 创建目录
+ */
+ipcMain.handle('create-directory', async (_event, dirPath: string, dirName: string) => {
+  const newDirPath = path.join(dirPath, dirName);
+  try {
+    await fs.mkdir(newDirPath, { recursive: true });
+    return newDirPath;
+  } catch {
+    return null;
+  }
+});
+
+/**
+ * IPC: 读取工作区状态
+ */
+ipcMain.handle('read-workspace-state', async () => {
+  const statePath = path.join(os.homedir(), '.wx-md', 'workspace-state.json');
+  try {
+    const data = await fs.readFile(statePath, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+});
+
+/**
+ * IPC: 写入工作区状态
+ */
+ipcMain.handle('write-workspace-state', async (_event, state) => {
+  const configDir = path.join(os.homedir(), '.wx-md');
+  const statePath = path.join(configDir, 'workspace-state.json');
+  try {
+    await fs.mkdir(configDir, { recursive: true });
+    await fs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf-8');
+    return true;
+  } catch {
+    return false;
+  }
+});

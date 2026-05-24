@@ -120,6 +120,13 @@ export interface WeChatDraftResponse {
   errmsg?: string;
 }
 
+// 工作区状态
+export interface WorkspaceState {
+  rootPath: string | null;
+  openFilePaths: string[];
+  activeFilePath: string | null;
+}
+
 /**
  * Electron API 类型定义
  * 通过 contextBridge 暴露给渲染进程的 API 接口
@@ -163,6 +170,21 @@ export interface ElectronAPI {
 
   /** 保存微信公众号配置 */
   wechatWriteConfig(config: WeChatConfig): Promise<boolean>;
+
+  /** 创建新文件，返回创建的文件路径，失败返回 null */
+  createFile(dirPath: string, fileName: string): Promise<string | null>;
+
+  /** 创建新目录，返回创建的目录路径，失败返回 null */
+  createDirectory(dirPath: string, dirName: string): Promise<string | null>;
+
+  /** 读取工作区状态 */
+  readWorkspaceState(): Promise<WorkspaceState | null>;
+
+  /** 保存工作区状态 */
+  writeWorkspaceState(state: WorkspaceState): Promise<boolean>;
+
+  /** 关闭窗口 */
+  closeWindow(): Promise<void>;
 }
 
 /**

@@ -46,6 +46,25 @@ export const useFileTree = () => {
     if (rootPath) void loadDirectory(rootPath);
   }, [rootPath, loadDirectory]);
 
+  const createFile = useCallback(async (fileName: string): Promise<string | null> => {
+    if (!rootPath || !window.electronAPI) return null;
+    const filePath = await window.electronAPI.createFile(rootPath, fileName);
+    if (filePath) {
+      await loadDirectory(rootPath);
+    }
+    return filePath;
+  }, [rootPath, loadDirectory]);
+
+  const createFolder = useCallback(async (folderName: string): Promise<string | null> => {
+    if (!rootPath || !window.electronAPI) return null;
+    const folderPath = await window.electronAPI.createDirectory(rootPath, folderName);
+    if (folderPath) {
+      setExpandedPaths(prev => new Set(prev).add(folderPath));
+      await loadDirectory(rootPath);
+    }
+    return folderPath;
+  }, [rootPath, loadDirectory]);
+
   // 监听菜单"打开文件夹"事件
   useEffect(() => {
     const handler = () => void openFolder();
@@ -62,5 +81,8 @@ export const useFileTree = () => {
     openFolder,
     toggleExpand,
     refresh,
+    loadDirectory,
+    createFile,
+    createFolder,
   };
 };

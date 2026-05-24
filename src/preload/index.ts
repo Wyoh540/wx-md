@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ElectronAPI, WeChatDraftArticle, WeChatConfig } from '@/types';
+import type { ElectronAPI, WeChatDraftArticle, WeChatConfig, WorkspaceState } from '@/types';
 
 const electronAPI: ElectronAPI = {
   openFile: () => ipcRenderer.invoke('open-file'),
@@ -11,6 +11,11 @@ const electronAPI: ElectronAPI = {
   readDirectory: (dirPath: string) => ipcRenderer.invoke('read-directory', dirPath),
   readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
   saveFileByPath: (filePath: string, content: string) => ipcRenderer.invoke('save-file-by-path', filePath, content),
+  createFile: (dirPath: string, fileName: string) => ipcRenderer.invoke('create-file', dirPath, fileName),
+  createDirectory: (dirPath: string, dirName: string) => ipcRenderer.invoke('create-directory', dirPath, dirName),
+  readWorkspaceState: () => ipcRenderer.invoke('read-workspace-state'),
+  writeWorkspaceState: (state: WorkspaceState) => ipcRenderer.invoke('write-workspace-state', state),
+  closeWindow: () => ipcRenderer.invoke('close-window'),
   wechatGetAccessToken: (appId: string, appSecret: string) => ipcRenderer.invoke('wechat-get-access-token', appId, appSecret),
   wechatUploadDraft: (accessToken: string, articles: WeChatDraftArticle[]) => ipcRenderer.invoke('wechat-upload-draft', accessToken, articles),
   wechatReadConfig: () => ipcRenderer.invoke('wechat-read-config'),
@@ -33,4 +38,8 @@ ipcRenderer.on('menu-save-file-as', () => {
 
 ipcRenderer.on('menu-open-directory', () => {
   window.dispatchEvent(new Event('menu-open-directory'));
+});
+
+ipcRenderer.on('save-workspace-state', () => {
+  window.dispatchEvent(new Event('save-workspace-state'));
 });
