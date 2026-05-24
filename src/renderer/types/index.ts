@@ -177,6 +177,18 @@ export interface ElectronAPI {
   /** 创建新目录，返回创建的目录路径，失败返回 null */
   createDirectory(dirPath: string, dirName: string): Promise<string | null>;
 
+  /** 删除文件，成功返回 true */
+  deleteFile(filePath: string): Promise<boolean>;
+
+  /** 删除目录，成功返回 true */
+  deleteDirectory(dirPath: string): Promise<boolean>;
+
+  /** 重命名文件，成功返回 true */
+  renameFile(filePath: string, newName: string): Promise<boolean>;
+
+  /** 重命名目录，成功返回 true */
+  renameDirectory(dirPath: string, newName: string): Promise<boolean>;
+
   /** 读取工作区状态 */
   readWorkspaceState(): Promise<WorkspaceState | null>;
 

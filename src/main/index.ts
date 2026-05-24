@@ -278,6 +278,56 @@ ipcMain.handle('create-directory', async (_event, dirPath: string, dirName: stri
 });
 
 /**
+ * IPC: 删除文件
+ */
+ipcMain.handle('delete-file', async (_event, filePath: string) => {
+  try {
+    await fs.unlink(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+/**
+ * IPC: 删除目录
+ */
+ipcMain.handle('delete-directory', async (_event, dirPath: string) => {
+  try {
+    await fs.rm(dirPath, { recursive: true, force: true });
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+/**
+ * IPC: 重命名文件
+ */
+ipcMain.handle('rename-file', async (_event, filePath: string, newName: string) => {
+  const newPath = path.join(path.dirname(filePath), newName);
+  try {
+    await fs.rename(filePath, newPath);
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+/**
+ * IPC: 重命名目录
+ */
+ipcMain.handle('rename-directory', async (_event, dirPath: string, newName: string) => {
+  const newPath = path.join(path.dirname(dirPath), newName);
+  try {
+    await fs.rename(dirPath, newPath);
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+/**
  * IPC: 读取工作区状态
  */
 ipcMain.handle('read-workspace-state', async () => {

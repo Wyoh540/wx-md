@@ -93,6 +93,12 @@ const MarkdownEditor: React.FC = () => {
     loadDirectory,
     createFile,
     createFolder,
+    deleteFile,
+    deleteDirectory,
+    renameFile,
+    renameDirectory,
+    setActiveFolderPath,
+    setRootPath,
   } = useFileTree();
 
   const { loadWorkspaceState, saveWorkspaceState, onSaveWorkspaceState } = useWorkspaceState();
@@ -141,6 +147,7 @@ const MarkdownEditor: React.FC = () => {
       // 恢复目录
       if (state.rootPath) {
         try {
+          setRootPath(state.rootPath);
           await loadDirectory(state.rootPath);
         } catch {
           console.warn('工作区目录已不存在:', state.rootPath);
@@ -272,6 +279,11 @@ const MarkdownEditor: React.FC = () => {
                 refresh={refresh}
                 createFile={createFile}
                 createFolder={createFolder}
+                deleteFile={deleteFile}
+                deleteDirectory={deleteDirectory}
+                renameFile={renameFile}
+                renameDirectory={renameDirectory}
+                setActiveFolderPath={setActiveFolderPath}
               />
             )}
           </div>

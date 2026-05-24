@@ -8,6 +8,7 @@ export const useFileTree = () => {
   const [rootPath, setRootPath] = useState<string | null>(null);
   const [tree, setTree] = useState<FileNode[]>([]);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [activeFolderPath, setActiveFolderPath] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +31,7 @@ export const useFileTree = () => {
     if (!dirPath) return;
     setRootPath(dirPath);
     setExpandedPaths(new Set());
+    setActiveFolderPath(null);
     await loadDirectory(dirPath);
   }, [loadDirectory]);
 
@@ -46,24 +48,76 @@ export const useFileTree = () => {
     if (rootPath) void loadDirectory(rootPath);
   }, [rootPath, loadDirectory]);
 
-  const createFile = useCallback(async (fileName: string): Promise<string | null> => {
-    if (!rootPath || !window.electronAPI) return null;
-    const filePath = await window.electronAPI.createFile(rootPath, fileName);
+  const createFile = useCallback(async (dirPath: string, fileName: string): Promise<string | null> => {
+    if (!window.electronAPI) return null;
+    const filePath = await window.electronAPI.createFile(dirPath, fileName);
     if (filePath) {
-      await loadDirectory(rootPath);
+      await loadDirectory(rootPath ?? dirPath);
     }
     return filePath;
   }, [rootPath, loadDirectory]);
 
-  const createFolder = useCallback(async (folderName: string): Promise<string | null> => {
-    if (!rootPath || !window.electronAPI) return null;
-    const folderPath = await window.electronAPI.createDirectory(rootPath, folderName);
+  const createFolder = useCallback(async (dirPath: string, folderName: string): Promise<string | null> => {
+    if (!window.electronAPI) return null;
+    const folderPath = await window.electronAPI.createDirectory(dirPath, folderName);
     if (folderPath) {
       setExpandedPaths(prev => new Set(prev).add(folderPath));
-      await loadDirectory(rootPath);
+      await loadDirectory(rootPath ?? dirPath);
     }
     return folderPath;
   }, [rootPath, loadDirectory]);
+
+  const deleteFile = useCallback(async (filePath: string): Promise<boolean> => {
+    if (!window.electronAPI) return false;
+    const success = await window.electronAPI.deleteFile(filePath);
+    if (success && rootPath) {
+      await loadDirectory(rootPath);
+    }
+    return success;
+  }, [rootPath, loadDirectory]);
+
+  const deleteDirectory = useCallback(async (dirPath: string): Promise<boolean> => {
+    if (!window.electronAPI) return false;
+    const success = await window.electronAPI.deleteDirectory(dirPath);
+    if (success && rootPath) {
+      setExpandedPaths(prev => {
+        const next = new Set(prev);
+        next.delete(dirPath);
+        return next;
+      });
+      if (activeFolderPath === dirPath) {
+        setActiveFolderPath(null);
+      }
+      await loadDirectory(rootPath);
+    }
+    return success;
+  }, [rootPath, loadDirectory, activeFolderPath]);
+
+  const renameFile = useCallback(async (filePath: string, newName: string): Promise<boolean> => {
+    if (!window.electronAPI) return false;
+    const success = await window.electronAPI.renameFile(filePath, newName);
+    if (success && rootPath) {
+      await loadDirectory(rootPath);
+    }
+    return success;
+  }, [rootPath, loadDirectory]);
+
+  const renameDirectory = useCallback(async (dirPath: string, newName: string): Promise<boolean> => {
+    if (!window.electronAPI) return false;
+    const success = await window.electronAPI.renameDirectory(dirPath, newName);
+    if (success && rootPath) {
+      setExpandedPaths(prev => {
+        const next = new Set(prev);
+        next.delete(dirPath);
+        return next;
+      });
+      if (activeFolderPath === dirPath) {
+        setActiveFolderPath(null);
+      }
+      await loadDirectory(rootPath);
+    }
+    return success;
+  }, [rootPath, loadDirectory, activeFolderPath]);
 
   // 监听菜单"打开文件夹"事件
   useEffect(() => {
@@ -76,6 +130,7 @@ export const useFileTree = () => {
     rootPath,
     tree,
     expandedPaths,
+    activeFolderPath,
     isLoading,
     error,
     openFolder,
@@ -84,5 +139,11 @@ export const useFileTree = () => {
     loadDirectory,
     createFile,
     createFolder,
+    deleteFile,
+    deleteDirectory,
+    renameFile,
+    renameDirectory,
+    setActiveFolderPath,
+    setRootPath,
   };
 };

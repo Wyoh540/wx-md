@@ -16,6 +16,7 @@ interface CreateItemDialogProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   label: string;
+  defaultName?: string;
   onConfirm: (name: string) => void;
 }
 
@@ -24,13 +25,14 @@ const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
   onOpenChange,
   title,
   label,
+  defaultName = '',
   onConfirm,
 }) => {
   const [name, setName] = useState('');
 
   useEffect(() => {
-    if (open) setName('');
-  }, [open]);
+    if (open) setName(defaultName);
+  }, [open, defaultName]);
 
   const handleConfirm = () => {
     if (!name.trim()) return;

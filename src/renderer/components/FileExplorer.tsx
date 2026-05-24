@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import FileTree from './FileTree';
 import type { FileNode } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FolderOpen, RefreshCw, FilePlus, FolderPlus } from 'lucide-react';
 import CreateItemDialog from './CreateItemDialog';
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from '@/components/ui/context-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface FileExplorerProps {
   onFileOpen: (filePath: string) => void;
@@ -18,9 +35,19 @@ interface FileExplorerProps {
   openFolder: () => void;
   toggleExpand: (nodePath: string) => void;
   refresh: () => void;
-  createFile: (fileName: string) => Promise<string | null>;
-  createFolder: (folderName: string) => Promise<string | null>;
+  createFile: (dirPath: string, fileName: string) => Promise<string | null>;
+  createFolder: (dirPath: string, folderName: string) => Promise<string | null>;
+  deleteFile: (filePath: string) => Promise<boolean>;
+  deleteDirectory: (dirPath: string) => Promise<boolean>;
+  renameFile: (filePath: string, newName: string) => Promise<boolean>;
+  renameDirectory: (dirPath: string, newName: string) => Promise<boolean>;
+  setActiveFolderPath: (path: string | null) => void;
 }
+
+const getParentDir = (p: string) => {
+  const lastSep = Math.max(p.lastIndexOf('\\'), p.lastIndexOf('/'));
+  return lastSep > 0 ? p.slice(0, lastSep) : p;
+};
 
 const FileExplorer: React.FC<FileExplorerProps> = ({
   onFileOpen,
@@ -35,30 +62,119 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   refresh,
   createFile,
   createFolder,
+  deleteFile,
+  deleteDirectory,
+  renameFile,
+  renameDirectory,
+  setActiveFolderPath,
 }) => {
-
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createType, setCreateType] = useState<'file' | 'folder'>('file');
+  const [createTargetDir, setCreateTargetDir] = useState<string>('');
+
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameNode, setRenameNode] = useState<FileNode | null>(null);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteNode, setDeleteNode] = useState<FileNode | null>(null);
+
+  const contextMenuNodeRef = useRef<FileNode | null>(null);
+
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   const rootName = rootPath ? rootPath.split(/[\\/]/).pop() : null;
 
+  // 同步标签页的激活文件到资源管理器选中状态
+  useEffect(() => {
+    if (activeFilePath) {
+      setSelectedPath(activeFilePath);
+    }
+  }, [activeFilePath]);
+
   const handleCreateFile = () => {
+    if (!rootPath) return;
     setCreateType('file');
+    setCreateTargetDir(rootPath);
     setCreateDialogOpen(true);
   };
 
   const handleCreateFolder = () => {
+    if (!rootPath) return;
     setCreateType('folder');
+    setCreateTargetDir(rootPath);
     setCreateDialogOpen(true);
   };
 
   const handleCreateConfirm = async (name: string) => {
     if (createType === 'file') {
-      const filePath = await createFile(name);
+      const filePath = await createFile(createTargetDir, name);
       if (filePath) onFileOpen(filePath);
     } else {
-      await createFolder(name);
+      await createFolder(createTargetDir, name);
     }
+  };
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, node: FileNode) => {
+    e.preventDefault();
+    contextMenuNodeRef.current = node;
+  }, []);
+
+  const handleMenuNewFile = () => {
+    const node = contextMenuNodeRef.current;
+    const targetDir = node
+      ? (node.type === 'directory' ? node.path : getParentDir(node.path))
+      : (rootPath ?? '');
+    if (!targetDir) return;
+    setCreateType('file');
+    setCreateTargetDir(targetDir);
+    setCreateDialogOpen(true);
+  };
+
+  const handleMenuNewFolder = () => {
+    const node = contextMenuNodeRef.current;
+    const targetDir = node
+      ? (node.type === 'directory' ? node.path : getParentDir(node.path))
+      : (rootPath ?? '');
+    if (!targetDir) return;
+    setCreateType('folder');
+    setCreateTargetDir(targetDir);
+    setCreateDialogOpen(true);
+  };
+
+  const handleMenuRename = () => {
+    const node = contextMenuNodeRef.current;
+    if (!node) return;
+    setRenameNode(node);
+    setRenameDialogOpen(true);
+  };
+
+  const handleMenuDelete = () => {
+    const node = contextMenuNodeRef.current;
+    if (!node) return;
+    setDeleteNode(node);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleRenameConfirm = async (newName: string) => {
+    if (!renameNode) return;
+    if (renameNode.type === 'file') {
+      await renameFile(renameNode.path, newName);
+    } else {
+      await renameDirectory(renameNode.path, newName);
+    }
+    setRenameDialogOpen(false);
+    setRenameNode(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteNode) return;
+    if (deleteNode.type === 'file') {
+      await deleteFile(deleteNode.path);
+    } else {
+      await deleteDirectory(deleteNode.path);
+    }
+    setDeleteDialogOpen(false);
+    setDeleteNode(null);
   };
 
   return (
@@ -143,17 +259,67 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         )}
 
         {rootPath && !isLoading && !error && (
-          <ScrollArea className="h-full">
-            <FileTree
-              nodes={tree}
-              expandedPaths={expandedPaths}
-              onToggle={toggleExpand}
-              onFileClick={onFileOpen}
-              activeFilePath={activeFilePath}
-            />
-          </ScrollArea>
+          <ContextMenu onOpenChange={(open) => {
+            if (!open) {
+              contextMenuNodeRef.current = null;
+            }
+          }}>
+            <ContextMenuTrigger className="h-full block">
+              <ScrollArea className="h-full">
+                <div>
+                  <FileTree
+                    nodes={tree}
+                    expandedPaths={expandedPaths}
+                    onToggle={toggleExpand}
+                    onFileClick={(path) => {
+                      setSelectedPath(path);
+                      onFileOpen(path);
+                    }}
+                    onFolderClick={(path) => {
+                      setSelectedPath(path);
+                      setActiveFolderPath(path);
+                    }}
+                    onContextMenu={handleContextMenu}
+                    onSelect={setSelectedPath}
+                    selectedPath={selectedPath}
+                  />
+                </div>
+              </ScrollArea>
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+              <ContextMenuItem
+                disabled={contextMenuNodeRef.current?.type !== 'file'}
+                onSelect={() => {
+                  const node = contextMenuNodeRef.current;
+                  if (node?.type === 'file') onFileOpen(node.path);
+                }}
+              >
+                打开
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onSelect={handleMenuNewFile}>新建文件</ContextMenuItem>
+              <ContextMenuItem onSelect={handleMenuNewFolder}>新建文件夹</ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                disabled={!contextMenuNodeRef.current}
+                onSelect={handleMenuRename}
+              >
+                重命名
+              </ContextMenuItem>
+              <ContextMenuItem
+                disabled={!contextMenuNodeRef.current}
+                onSelect={handleMenuDelete}
+                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+              >
+                删除
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onSelect={refresh}>刷新</ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
         )}
       </CardContent>
+
       <CreateItemDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
@@ -161,6 +327,40 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         label={createType === 'file' ? '文件名' : '文件夹名'}
         onConfirm={handleCreateConfirm}
       />
+
+      <CreateItemDialog
+        open={renameDialogOpen}
+        onOpenChange={(open) => {
+          setRenameDialogOpen(open);
+          if (!open) setRenameNode(null);
+        }}
+        title="重命名"
+        label="新名称"
+        defaultName={renameNode?.name ?? ''}
+        onConfirm={handleRenameConfirm}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除 "{deleteNode?.name}" 吗？此操作不可撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

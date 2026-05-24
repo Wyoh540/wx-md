@@ -12,7 +12,10 @@ interface FileTreeNodeProps {
   expandedPaths: Set<string>;
   onToggle: (path: string) => void;
   onFileClick: (path: string) => void;
-  activeFilePath?: string;
+  onFolderClick: (path: string) => void;
+  onContextMenu: (e: React.MouseEvent, node: FileNode) => void;
+  onSelect: (path: string) => void;
+  selectedPath?: string | null;
 }
 
 const FileTreeNode: React.FC<FileTreeNodeProps> = React.memo(({
@@ -22,28 +25,41 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = React.memo(({
   expandedPaths,
   onToggle,
   onFileClick,
-  activeFilePath,
+  onFolderClick,
+  onContextMenu,
+  onSelect,
+  selectedPath,
 }) => {
-  const isActive = node.path === activeFilePath;
+  const isActive = node.path === selectedPath;
   const isClickable = node.type === 'file' && CLICKABLE_EXTENSIONS.test(node.name);
 
   const handleClick = () => {
-    if (node.type === 'directory') onToggle(node.path);
-    else if (isClickable) onFileClick(node.path);
+    onSelect(node.path);
+    if (node.type === 'directory') {
+      onToggle(node.path);
+      onFolderClick(node.path);
+    } else if (isClickable) {
+      onFileClick(node.path);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    onSelect(node.path);
+    onContextMenu(e, node);
   };
 
   return (
-    <div>
+    <div data-file-node="true">
       <div
         className={cn(
           "flex items-center gap-1 rounded-sm py-1 cursor-pointer select-none text-sm mx-1",
           isActive && "bg-primary/10 text-primary font-medium",
           node.type === 'file' && !isClickable && "text-muted-foreground cursor-default",
-          !isActive && node.type !== 'file' && "hover:bg-accent hover:text-accent-foreground",
-          !isActive && node.type === 'file' && isClickable && "hover:bg-accent hover:text-accent-foreground"
+          !isActive && "hover:bg-accent hover:text-accent-foreground"
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
         title={node.path}
       >
         <span className="flex-shrink-0 w-4 flex items-center justify-center text-muted-foreground">
@@ -64,7 +80,10 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = React.memo(({
           expandedPaths={expandedPaths}
           onToggle={onToggle}
           onFileClick={onFileClick}
-          activeFilePath={activeFilePath}
+          onFolderClick={onFolderClick}
+          onContextMenu={onContextMenu}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
         />
       ))}
     </div>
@@ -77,7 +96,10 @@ interface FileTreeProps {
   expandedPaths: Set<string>;
   onToggle: (path: string) => void;
   onFileClick: (path: string) => void;
-  activeFilePath?: string;
+  onFolderClick: (path: string) => void;
+  onContextMenu: (e: React.MouseEvent, node: FileNode) => void;
+  onSelect: (path: string) => void;
+  selectedPath?: string | null;
 }
 
 const FileTree: React.FC<FileTreeProps> = ({
@@ -85,7 +107,10 @@ const FileTree: React.FC<FileTreeProps> = ({
   expandedPaths,
   onToggle,
   onFileClick,
-  activeFilePath,
+  onFolderClick,
+  onContextMenu,
+  onSelect,
+  selectedPath,
 }) => {
   return (
     <div className="py-1">
@@ -98,7 +123,10 @@ const FileTree: React.FC<FileTreeProps> = ({
           expandedPaths={expandedPaths}
           onToggle={onToggle}
           onFileClick={onFileClick}
-          activeFilePath={activeFilePath}
+          onFolderClick={onFolderClick}
+          onContextMenu={onContextMenu}
+          onSelect={onSelect}
+          selectedPath={selectedPath}
         />
       ))}
     </div>
