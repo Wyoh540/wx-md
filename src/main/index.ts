@@ -3,6 +3,12 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import started from 'electron-squirrel-startup';
 import { getPreloadScriptPath } from './preloadPath';
+import {
+  wechatGetAccessToken,
+  wechatUploadDraft,
+  wechatReadConfig,
+  wechatWriteConfig,
+} from './wechat';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -200,3 +206,29 @@ ipcMain.handle('save-file-by-path', async (_event, filePath: string, content: st
     return false;
   }
 });
+
+/**
+ * IPC: 获取微信 access_token
+ */
+ipcMain.handle(
+  'wechat-get-access-token',
+  async (_event, appId: string, appSecret: string) => wechatGetAccessToken(appId, appSecret)
+);
+
+/**
+ * IPC: 上传图文素材草稿
+ */
+ipcMain.handle(
+  'wechat-upload-draft',
+  async (_event, accessToken: string, articles) => wechatUploadDraft(accessToken, articles)
+);
+
+/**
+ * IPC: 读取微信配置
+ */
+ipcMain.handle('wechat-read-config', async () => wechatReadConfig());
+
+/**
+ * IPC: 写入微信配置
+ */
+ipcMain.handle('wechat-write-config', async (_event, config) => wechatWriteConfig(config));

@@ -86,6 +86,40 @@ export interface Tab {
   isDirty: boolean;
 }
 
+// 微信公众号配置
+export interface WeChatConfig {
+  appId: string;
+  appSecret: string;
+  author: string;
+  thumbMediaId: string;
+}
+
+// 微信公众号草稿文章
+export interface WeChatDraftArticle {
+  title: string;
+  author: string;
+  digest: string;
+  content: string;
+  thumb_media_id: string;
+  need_open_comment: number;
+  only_fans_can_comment: number;
+}
+
+// 微信公众号 access_token 响应
+export interface WeChatTokenResponse {
+  access_token?: string;
+  expires_in?: number;
+  errcode?: number;
+  errmsg?: string;
+}
+
+// 微信公众号草稿上传响应
+export interface WeChatDraftResponse {
+  media_id?: string;
+  errcode?: number;
+  errmsg?: string;
+}
+
 /**
  * Electron API 类型定义
  * 通过 contextBridge 暴露给渲染进程的 API 接口
@@ -117,6 +151,18 @@ export interface ElectronAPI {
 
   /** 按路径保存文件内容 */
   saveFileByPath(filePath: string, content: string): Promise<boolean>;
+
+  /** 获取微信公众号 access_token */
+  wechatGetAccessToken(appId: string, appSecret: string): Promise<WeChatTokenResponse>;
+
+  /** 上传图文消息草稿到微信公众号 */
+  wechatUploadDraft(accessToken: string, articles: WeChatDraftArticle[]): Promise<WeChatDraftResponse>;
+
+  /** 读取微信公众号配置 */
+  wechatReadConfig(): Promise<WeChatConfig | null>;
+
+  /** 保存微信公众号配置 */
+  wechatWriteConfig(config: WeChatConfig): Promise<boolean>;
 }
 
 /**

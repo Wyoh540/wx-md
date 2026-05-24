@@ -41,7 +41,10 @@ import {
   Code,
   Info,
   ChevronDown,
+  Settings,
+  Upload,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ToolbarProps {
   currentTheme: ThemeType;
@@ -59,6 +62,7 @@ interface ToolbarProps {
   copyAsWechat: () => void;
   content: string;
   saveContent: (content: string) => void;
+  onUploadClick?: () => void;
 }
 
 const Toolbar = ({
@@ -76,8 +80,10 @@ const Toolbar = ({
   togglePreviewMode,
   copyAsWechat,
   content,
-  saveContent
+  saveContent,
+  onUploadClick,
 }: ToolbarProps) => {
+  const navigate = useNavigate();
   const {
     isElectron,
     openFile,
@@ -284,6 +290,36 @@ const Toolbar = ({
               </Button>
             </TooltipTrigger>
             <TooltipContent>复制为公众号格式</TooltipContent>
+          </Tooltip>
+
+          {/* 设置按钮 */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/settings')}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>微信公众号设置</TooltipContent>
+          </Tooltip>
+
+          {/* 上传草稿按钮 */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => onUploadClick?.()}
+                className="gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Upload className="h-4 w-4" />
+                上传
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>上传到微信公众号草稿箱</TooltipContent>
           </Tooltip>
         </div>
       </header>

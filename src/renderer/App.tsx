@@ -5,6 +5,7 @@ import './styles/app.css'
 
 // 懒加载页面组件
 const MarkdownEditor = React.lazy(() => import('./pages/MarkdownEditor'))
+const WeChatSettings = React.lazy(() => import('./pages/WeChatSettings'))
 
 function App(): React.ReactElement {
   return (
@@ -21,6 +22,7 @@ function App(): React.ReactElement {
         }>
           <Routes>
             <Route path="/" element={<MarkdownEditor />} />
+            <Route path="/settings" element={<WeChatSettings />} />
           </Routes>
         </React.Suspense>
       </div>

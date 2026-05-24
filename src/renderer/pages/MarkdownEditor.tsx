@@ -13,6 +13,9 @@ import { useTheme, ThemeProvider } from '../contexts/ThemeContext'
 import { useCopy } from '../hooks/useCopy'
 import { useStore } from '../hooks/useStore'
 import { useTabs } from '../hooks/useTabs'
+import { useWeChatDraft } from '@/hooks/useWeChatDraft'
+import { useWeChatConfig } from '@/hooks/useWeChatConfig'
+import WeChatUploadDialog from '@/components/WeChatUploadDialog'
 import Notification from '../components/Notification'
 import {
   Dialog,
@@ -82,7 +85,22 @@ const MarkdownEditor: React.FC = () => {
     type: 'success' | 'error';
   }>({ visible: false, message: '', type: 'success' });
 
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // 无标签时使用 useStore 内容；有激活标签时使用标签内容
+  const markdownText = activeTab
+    ? activeTab.content
+    : (content === null || content === undefined ? markdownExample : content);
+
+  const { extractTitle, extractDigest } = useWeChatDraft();
+  const { config } = useWeChatConfig();
+
+  const uploadTitle = extractTitle(markdownText);
+  const uploadDigest = extractDigest(markdownText);
+
+  const handleUploadClick = () => setUploadDialogOpen(true);
 
   // 是否在 Electron 环境
   const isElectron = !!window.electronAPI;
@@ -95,11 +113,6 @@ const MarkdownEditor: React.FC = () => {
       setTheme(settings.currentTheme);
     }
   }, [isLoaded, settings, setFontFamily, setFontSize, setPrimaryColor, setTheme]);
-
-  // 无标签时使用 useStore 内容；有激活标签时使用标签内容
-  const markdownText = activeTab
-    ? activeTab.content
-    : (content === null || content === undefined ? markdownExample : content);
 
   const handleContentChange = useCallback((value: string) => {
     if (activeTabId) {
@@ -171,6 +184,7 @@ const MarkdownEditor: React.FC = () => {
         copyAsWechat={handleCopyToWechat}
         content={markdownText}
         saveContent={saveContent}
+        onUploadClick={handleUploadClick}
       />
 
       {/* 主体区域 */}
@@ -275,6 +289,22 @@ const MarkdownEditor: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WeChatUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        title={uploadTitle}
+        author={config.author}
+        digest={uploadDigest}
+        contentHtml={renderedMarkdown}
+        onUpload={() => {
+          setNotification({
+            visible: true,
+            message: '文章已上传到微信公众号草稿箱',
+            type: 'success',
+          });
+        }}
+      />
     </div>
   );
 };
