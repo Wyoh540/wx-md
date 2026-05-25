@@ -4,36 +4,30 @@ Compact instruction file for OpenCode / Claude Code sessions.
 
 ## Commands
 
-- Web dev: `npm run dev` → http://localhost:5173 (uses `src/renderer/index.html`)
-- Electron dev: `npm run start` (uses project-root `index.html`)
+- Electron dev: `npm run start`
+- Type-check: `npm run build` (`tsc --noEmit`)
 - Lint: `npm run lint` (ESLint flat config, zero warnings enforced)
-- Web build: `npm run build` → `dist/`
 - Electron package: `npm run package` → `out/`
 - Electron make: `npm run make`
 
 ## Source Layout
 
-- `src/renderer/` — React app. Shared by web and Electron renderer.
+- `src/renderer/` — React app (Electron renderer process).
 - `src/main/` — Electron main process (Node APIs).
 - `src/preload/` — Electron preload script (`contextBridge`).
 
-> There is no `electron/` directory at repo root. The `@electron/*` path alias in `tsconfig.json` is stale.
+## Build System
 
-## Build System Quirks
-
-**Two HTML entry points**
-- `src/renderer/index.html` — Web-only entry (`vite.config.ts`, `root: 'src/renderer'`).
+**HTML entry point**
 - `index.html` (project root) — Electron renderer entry (`vite.renderer.config.ts`).
 
-**Three Vite configs for Electron**
+**Vite configs**
 - `vite.main.config.ts` — Main process. `@` alias resolves to `src/main/`.
 - `vite.preload.config.ts` — Preload script. `@` alias resolves to `src/renderer/`.
 - `vite.renderer.config.ts` — Renderer process. `@` alias resolves to `src/renderer/`.
 
-> The web Vite config (`vite.config.ts`) and Electron renderer config (`vite.renderer.config.ts`) are **not** interchangeable. Do not edit one assuming it covers the other.
-
 **Electron Forge**
-- Configured in `forge.config.cjs`. Do not confuse with plain Vite commands.
+- Configured in `forge.config.cjs`.
 
 ## TypeScript & Lint Constraints
 
@@ -83,5 +77,5 @@ MarkdownEditor
 
 ## Environment Detection
 
-- `useElectronFile.ts` checks `window.electronAPI` to branch between Electron and web mode.
-- In web mode, all file I/O is disabled gracefully.
+- `useElectronFile.ts` checks `window.electronAPI` to confirm Electron environment.
+- File I/O is available only when `window.electronAPI` is present.

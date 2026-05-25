@@ -9,9 +9,9 @@
 
 </div>
 
-一款专为微信公众号内容创作者打造的桌面级 Markdown 编辑器。基于 Electron 构建，提供媲美专业 IDE 的文件管理和编辑体验，同时保留网页版的便捷性，让公众号排版从此告别繁琐。
+一款专为微信公众号内容创作者打造的桌面级 Markdown 编辑器。基于 Electron 构建，提供媲美专业 IDE 的文件管理和编辑体验，让公众号排版从此告别繁琐。
 
-[在线体验](https://md.flyeric.top) &nbsp;|&nbsp; [下载桌面版](https://github.com/flyeric0212/wx-md/releases)
+[下载桌面版](https://github.com/flyeric0212/wx-md/releases)
 
 ![wx-md 界面预览](images/wx-md-ui.png)
 
@@ -24,8 +24,6 @@
 - **自动保存与恢复**：关闭应用后自动记忆工作区，下次打开一切如初
 - **一键上传草稿**：直接推送文章到微信公众号草稿箱，无需手动复制粘贴
 - **原生操作体验**：系统级文件夹选择、快捷键、文件对话框，操作更流畅
-
-网页版适合临时编辑和轻量使用，桌面版才是日常创作的主力工具。
 
 ## 桌面版专属功能
 
@@ -73,7 +71,7 @@
 - 无需复制、粘贴、调整格式，一键完成发布前准备
 - 在应用内即可完成从写作到上传的完整工作流
 
-## 共享功能（桌面版 + 网页版）
+## 编辑功能
 
 ### 实时 Markdown 编辑与预览
 
@@ -103,8 +101,6 @@
 
 ## 安装
 
-### 桌面应用（推荐）
-
 前往 [Releases](https://github.com/flyeric0212/wx-md/releases) 页面下载对应系统的安装包：
 
 - **Windows**：下载 `.exe` 安装程序，双击运行即可安装
@@ -128,27 +124,11 @@
 npm install
 ```
 
-**启动桌面版开发模式**
+**启动开发模式**
 
 ```bash
 npm run start
 ```
-
-**启动网页版开发模式**
-
-```bash
-npm run dev
-```
-
-应用将在 http://localhost:5173 启动。
-
-**构建生产版本**
-
-```bash
-npm run build
-```
-
-构建后的文件生成在 `dist` 目录。
 
 **桌面应用打包**
 
@@ -174,35 +154,9 @@ npm run make
 - **打包工具**：Electron Forge（Windows 使用 Squirrel 安装器）
 - **构建工具**：Vite
 
-## Docker 部署
-
-如果你更倾向于在服务器上部署网页版，可以使用 Docker：
-
-### 构建镜像
-
-```bash
-docker build -t your-repo/wx-md:latest .
-```
-
-### 跨平台构建并推送
-
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 -t your-repo/wx-md:latest --push .
-```
-
-### 使用 docker-compose 部署
-
-```bash
-cd deploy
-docker-compose build
-docker-compose up -d
-```
-
-访问 http://localhost 即可使用。
-
 ## 使用指南
 
-### 桌面版基本操作
+### 基本操作
 
 1. 打开应用后，点击侧栏顶部的"打开文件夹"按钮选择本地目录
 2. 在文件树中点击任意 Markdown 文件，即可在编辑器中打开
@@ -210,13 +164,6 @@ docker-compose up -d
 4. 按 `Ctrl+S` 保存当前文件
 5. 点击顶部工具栏的"复制"按钮，将文章复制为微信格式
 6. 或点击"上传草稿"按钮，直接推送至微信公众号草稿箱
-
-### 网页版基本操作
-
-1. 在左侧编辑区输入 Markdown 格式的文本
-2. 右侧会实时显示渲染后的 HTML 效果
-3. 点击顶部工具栏的"复制"按钮可以复制为微信公众号格式
-4. 直接粘贴到微信公众号后台编辑器中即可
 
 ### 样式设置
 
@@ -247,7 +194,7 @@ docker-compose up -d
 ### 核心功能实现
 
 - `renderMarkdown`：Markdown 渲染函数，将 Markdown 文本转换为适合微信的 HTML
-- `useElectronFile`：文件操作 Hook，区分 Electron 和网页环境，处理本地文件读写
+- `useElectronFile`：文件操作 Hook，处理 Electron 环境下的本地文件读写
 - `useCopy`：复制功能 Hook，处理复制为微信公众号格式
 - `useStore`：状态管理 Hook，管理编辑器内容和用户设置
 - `ThemeContext`：主题上下文，负责主题样式的实时应用
