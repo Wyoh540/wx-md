@@ -14,6 +14,7 @@ export const useTabs = () => {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const tabsRef = useRef<Tab[]>(tabs);
+  const openInProgressRef = useRef<Set<string>>(new Set());
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -26,21 +27,37 @@ export const useTabs = () => {
    * 打开文件为新标签，如已打开则激活对应标签
    */
   const openFile = useCallback(async (filePath: string) => {
+    // Gate: prevent concurrent opens for the same file
+    if (openInProgressRef.current.has(filePath)) return;
+
+    // Dedup: file already open in a tab?
     const existing = tabsRef.current.find(t => t.filePath === filePath);
     if (existing) {
       setActiveTabId(existing.id);
       return;
     }
 
-    const content = await window.electronAPI?.readFile(filePath);
-    if (content === null || content === undefined) return;
+    openInProgressRef.current.add(filePath);
+    try {
+      const content = await window.electronAPI?.readFile(filePath);
+      if (content === null || content === undefined) return;
 
-    const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const title = filePath.split(/[\\/]/).pop() ?? filePath;
-    const newTab: Tab = { id, filePath, title, content, isDirty: false };
+      // Re-check after async gap: another call may have created this tab
+      const existingAfterAwait = tabsRef.current.find(t => t.filePath === filePath);
+      if (existingAfterAwait) {
+        setActiveTabId(existingAfterAwait.id);
+        return;
+      }
 
-    setTabs(prev => [...prev, newTab]);
-    setActiveTabId(id);
+      const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const title = filePath.split(/[\\/]/).pop() ?? filePath;
+      const newTab: Tab = { id, filePath, title, content, isDirty: false };
+
+      setTabs(prev => [...prev, newTab]);
+      setActiveTabId(id);
+    } finally {
+      openInProgressRef.current.delete(filePath);
+    }
   }, []);
 
   /**
