@@ -114,8 +114,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     }
   };
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, node: FileNode) => {
-    e.preventDefault();
+  const handleContextMenu = useCallback((_e: React.MouseEvent, node: FileNode) => {
     contextMenuNodeRef.current = node;
   }, []);
 
