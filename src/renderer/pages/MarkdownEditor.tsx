@@ -201,8 +201,10 @@ const MarkdownEditor: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTabId, saveTab]);
 
-  const handleCopyToWechat = () => {
-    const result = copyToWechat();
+  const baseDir = activeTab?.filePath ? activeTab.filePath.replace(/[\\/][^\\/]*$/, '') : undefined;
+
+  const handleCopyToWechat = async () => {
+    const result = await copyToWechat();
     setNotification({
       visible: true,
       message: result
@@ -220,8 +222,54 @@ const MarkdownEditor: React.FC = () => {
     const themeStyles = getThemeConfig();
     const currentFontFamily = getFontFamily();
     const currentFontSize = getFontSize();
-    return renderMarkdown(markdownText, themeStyles, currentFontFamily, currentFontSize);
-  }, [markdownText, getThemeConfig, getFontFamily, getFontSize]);
+    return renderMarkdown(markdownText, themeStyles, currentFontFamily, currentFontSize, baseDir);
+  }, [markdownText, getThemeConfig, getFontFamily, getFontSize, baseDir]);
+
+  // 缓存已转换为 base64 的本地图片，避免重复读取文件
+  const imageCacheRef = useRef<Record<string, string>>({});
+
+  // 预览区渲染后，将 file:// 路径的本地图片转为 base64 data URI
+  // 开发模式下页面通过 http://localhost 加载，无法直接显示 file:// 图片
+  useEffect(() => {
+    const convertImages = async () => {
+      const previewDiv = document.getElementById('output');
+      if (!previewDiv) return;
+
+      const imgs = previewDiv.querySelectorAll('img');
+      for (const img of Array.from(imgs)) {
+        const src = img.getAttribute('src');
+        if (!src || !src.startsWith('file://')) continue;
+
+        // 缓存命中：直接复用
+        if (imageCacheRef.current[src]) {
+          img.setAttribute('src', imageCacheRef.current[src]);
+          continue;
+        }
+
+        try {
+          const base64 = await window.electronAPI?.readFileAsBase64(src);
+          if (base64) {
+            const ext = src.split('.').pop()?.toLowerCase() || 'png';
+            const mimeType =
+              ext === 'jpg' || ext === 'jpeg'
+                ? 'image/jpeg'
+                : ext === 'gif'
+                  ? 'image/gif'
+                  : ext === 'svg'
+                    ? 'image/svg+xml'
+                    : 'image/png';
+            const dataUrl = `data:${mimeType};base64,${base64}`;
+            imageCacheRef.current[src] = dataUrl;
+            img.setAttribute('src', dataUrl);
+          }
+        } catch (error) {
+          console.error('转换预览图片失败:', src, error);
+        }
+      }
+    };
+
+    void convertImages();
+  }, [renderedMarkdown]);
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -379,6 +427,7 @@ const MarkdownEditor: React.FC = () => {
         author={config.author}
         digest={uploadDigest}
         contentHtml={renderedMarkdown}
+        baseDir={activeTab?.filePath ? activeTab.filePath.replace(/[\\/][^\\/]*$/, '') : undefined}
         onUpload={() => {
           setNotification({
             visible: true,

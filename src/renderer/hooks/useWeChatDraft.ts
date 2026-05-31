@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { WeChatConfig, WeChatDraftArticle } from '@/types';
+import type { WeChatConfig, WeChatDraftArticle, WeChatImageUploadMap } from '@/types';
 
 /**
  * 从 Markdown 文本中提取 H1 标题
@@ -69,6 +69,7 @@ export function useWeChatDraft() {
     author: string;
     digest: string;
     contentHtml: string;
+    baseDir?: string;
   }): Promise<{ success: boolean; message: string }> => {
     // 检查 Electron 环境
     if (!window.electronAPI?.wechatGetAccessToken) {
@@ -97,12 +98,43 @@ export function useWeChatDraft() {
 
       const accessToken = tokenResponse.access_token;
 
+      // 处理文章中的图片：上传到微信素材库并替换 URL
+      let processedContentHtml = params.contentHtml;
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(params.contentHtml, 'text/html');
+      const images = doc.querySelectorAll('img');
+      const imageSrcs: string[] = [];
+
+      for (const img of images) {
+        const src = img.getAttribute('src');
+        if (src && !src.startsWith('data:') && !src.includes('mmbiz.qpic.cn')) {
+          imageSrcs.push(src);
+        }
+      }
+
+      if (imageSrcs.length > 0) {
+        const uploadMaps: WeChatImageUploadMap[] = await window.electronAPI.wechatUploadImages(
+          accessToken,
+          imageSrcs,
+          params.baseDir
+        );
+
+        // 替换 contentHtml 中的图片 URL
+        for (const map of uploadMaps) {
+          processedContentHtml = processedContentHtml.replace(
+            new RegExp(map.originalSrc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+            map.wechatUrl
+          );
+        }
+      }
+
       // 构造草稿文章
       const article: WeChatDraftArticle = {
         title: params.title,
         author: params.author,
         digest: params.digest,
-        content: params.contentHtml,
+        content: processedContentHtml,
         thumb_media_id: config.thumbMediaId || '',
         need_open_comment: 0,
         only_fans_can_comment: 0,

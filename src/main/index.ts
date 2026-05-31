@@ -7,9 +7,12 @@ import { getPreloadScriptPath } from './preloadPath';
 import {
   wechatGetAccessToken,
   wechatUploadDraft,
+  wechatUploadImage,
   wechatReadConfig,
   wechatWriteConfig,
 } from './wechat';
+import http from 'http';
+import https from 'https';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -27,6 +30,8 @@ function createWindow(): void {
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    show: false,
+    backgroundColor: '#ffffff',
     webPreferences: {
       preload: getPreloadScriptPath(__dirname),
       contextIsolation: true,
@@ -42,10 +47,22 @@ function createWindow(): void {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
+  // 等待页面准备好后再显示窗口，避免白屏
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
+  });
+
   mainWindow.on('close', (event) => {
     if (mainWindow) {
       event.preventDefault();
       mainWindow.webContents.send('save-workspace-state');
+
+      // 兜底：如果渲染进程无响应，3秒后强制关闭窗口
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.destroy();
+        }
+      }, 3000);
     }
   });
 
@@ -242,6 +259,84 @@ ipcMain.handle('wechat-read-config', async () => wechatReadConfig());
 ipcMain.handle('wechat-write-config', async (_event, config) => wechatWriteConfig(config));
 
 /**
+ * IPC: 批量上传文章中的图片到微信素材库
+ */
+ipcMain.handle(
+  'wechat-upload-images',
+  async (_event, accessToken: string, imageSrcs: string[], baseDir?: string) => {
+    const results: { originalSrc: string; wechatUrl: string }[] = [];
+
+    for (const src of imageSrcs) {
+      try {
+        let imageBuffer: Buffer;
+        let filename = 'image.png';
+
+        if (src.startsWith('http://') || src.startsWith('https://')) {
+          // 下载网络图片
+          imageBuffer = await new Promise<Buffer>((resolve, reject) => {
+            const client = src.startsWith('https:') ? https : http;
+            const req = client.get(src, (res) => {
+              if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                // 跟随重定向
+                client.get(res.headers.location, (redirectRes) => {
+                  const chunks: Buffer[] = [];
+                  redirectRes.on('data', (chunk) => chunks.push(chunk));
+                  redirectRes.on('end', () => resolve(Buffer.concat(chunks)));
+                  redirectRes.on('error', (err) => reject(err));
+                }).on('error', (err) => reject(err));
+                return;
+              }
+
+              const chunks: Buffer[] = [];
+              res.on('data', (chunk) => chunks.push(chunk));
+              res.on('end', () => resolve(Buffer.concat(chunks)));
+              res.on('error', (err) => reject(err));
+            });
+            req.on('error', (err) => reject(err));
+            req.setTimeout(15000, () => {
+              req.destroy();
+              reject(new Error('Download timeout'));
+            });
+          });
+
+          // 从URL中提取文件名
+          try {
+            const urlPath = new URL(src).pathname;
+            const name = path.basename(urlPath);
+            if (name) filename = name;
+          } catch {
+            // 使用默认文件名
+          }
+        } else {
+          // 本地文件路径
+          let filePath = src;
+
+          // 如果是相对路径，基于 baseDir 解析
+          if (!path.isAbsolute(src) && baseDir) {
+            filePath = path.resolve(baseDir, src);
+          }
+
+          imageBuffer = await fs.readFile(filePath);
+          filename = path.basename(filePath);
+        }
+
+        // 上传到微信素材库
+        const response = await wechatUploadImage(accessToken, imageBuffer, filename);
+        if (response.url) {
+          results.push({ originalSrc: src, wechatUrl: response.url });
+        } else {
+          console.error(`上传图片失败: ${src}`, response.errmsg);
+        }
+      } catch (error) {
+        console.error(`处理图片失败: ${src}`, error);
+      }
+    }
+
+    return results;
+  }
+);
+
+/**
  * IPC: 关闭窗口
  */
 ipcMain.handle('close-window', () => {
@@ -330,6 +425,18 @@ ipcMain.handle('rename-directory', async (_event, dirPath: string, newName: stri
 /**
  * IPC: 读取工作区状态
  */
+ipcMain.handle('read-file-as-base64', async (_event, filePath: string) => {
+  try {
+    // 移除 file:// 前缀
+    const cleanPath = filePath.replace(/^file:\/\//, '');
+    const data = await fs.readFile(cleanPath);
+    return data.toString('base64');
+  } catch (error) {
+    console.error('读取文件失败:', error);
+    return null;
+  }
+});
+
 ipcMain.handle('read-workspace-state', async () => {
   const statePath = path.join(os.homedir(), '.wx-md', 'workspace-state.json');
   try {

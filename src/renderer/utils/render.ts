@@ -210,7 +210,8 @@ const generateFootnoteContent = (footnotes: FootnoteLink[]): string => {
  */
 export const createMarkdownRenderer = (
   themeStyles?: ThemeStyles,
-  baseStyles: string = ''
+  baseStyles: string = '',
+  baseDir?: string
 ): RendererResult => {
   // 存储引用链接
   const footnotes: FootnoteLink[] = [];
@@ -362,9 +363,24 @@ export const createMarkdownRenderer = (
 
     // 图片
     image(href, title, text) {
+      let resolvedHref = href;
+
+      // 如果是相对路径且有 baseDir，解析为 file:// 绝对路径
+      if (baseDir && href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('file://') && !href.startsWith('data:')) {
+        // 使用 URL 构造函数正确解析相对路径（支持 ./ ../ 等）
+        const normalizedBase = baseDir.replace(/\\/g, '/').replace(/\/$/, '');
+        const baseUrl = `file:///${normalizedBase}/`;
+        try {
+          resolvedHref = new URL(href, baseUrl).href;
+        } catch {
+          // URL 解析失败时回退到简单拼接
+          resolvedHref = `${baseUrl}${href}`;
+        }
+      }
+
       // 图片属性
       const imgAttributes: Record<string, string> = {
-        src: href,
+        src: resolvedHref,
         alt: text
       };
 
@@ -510,13 +526,14 @@ export const renderMarkdown = (
   markdownText: string,
   themeStyles?: ThemeStyles,
   fontFamily?: string,
-  fontSize?: string
+  fontSize?: string,
+  baseDir?: string
 ): string => {
   // 创建基础样式
   const baseStyles = createBaseStyles(themeStyles, fontFamily, fontSize);
 
   // 获取渲染器和脚注处理器
-  const { renderer, generateFootnotesHtml } = createMarkdownRenderer(themeStyles, baseStyles);
+  const { renderer, generateFootnotesHtml } = createMarkdownRenderer(themeStyles, baseStyles, baseDir);
 
   // 配置渲染器
   marked.use({ renderer });

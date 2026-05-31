@@ -44,6 +44,12 @@ function httpsGet(url: string): Promise<string> {
   });
 }
 
+interface UploadImageResponse {
+  url?: string;
+  errcode?: number;
+  errmsg?: string;
+}
+
 function httpsPost(url: string, body: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
@@ -76,9 +82,86 @@ function httpsPost(url: string, body: string): Promise<string> {
       reject(new Error('Request timeout'));
     });
 
+  req.write(body);
+  req.end();
+});
+}
+
+/**
+ * 发送 multipart form-data POST 请求
+ */
+function httpsPostMultipart(
+  url: string,
+  boundary: string,
+  body: Buffer
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const options = {
+      hostname: urlObj.hostname,
+      path: urlObj.pathname + urlObj.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': body.length,
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        resolve(data);
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    req.setTimeout(30000, () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+
     req.write(body);
     req.end();
   });
+}
+
+/**
+ * 上传图片到微信公众号素材库
+ * 使用 media/uploadimg 接口，返回可用于图文消息中的图片URL
+ */
+export function wechatUploadImage(
+  accessToken: string,
+  imageBuffer: Buffer,
+  filename: string
+): Promise<UploadImageResponse> {
+  const url = `https://api.weixin.qq.com/cgi-bin/media/uploadimg?access_token=${accessToken}`;
+  const boundary = `----FormBoundary${Date.now()}`;
+
+  const prefix = Buffer.from(
+    `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="media"; filename="${filename}"\r\n` +
+      `Content-Type: image/png\r\n\r\n`
+  );
+  const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
+  const body = Buffer.concat([prefix, imageBuffer, suffix]);
+
+  return httpsPostMultipart(url, boundary, body)
+    .then((data) => {
+      try {
+        return JSON.parse(data) as UploadImageResponse;
+      } catch {
+        return { errcode: -1, errmsg: 'Invalid JSON response' };
+      }
+    })
+    .catch((err) => {
+      return { errcode: -1, errmsg: err.message };
+    });
 }
 
 export function wechatGetAccessToken(

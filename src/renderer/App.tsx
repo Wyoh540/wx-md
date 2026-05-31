@@ -1,5 +1,5 @@
 import React from 'react'
-import { Routes, Route, BrowserRouter } from 'react-router-dom'
+import { Routes, Route, HashRouter } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import './styles/app.css'
 
@@ -9,7 +9,7 @@ const WeChatSettings = React.lazy(() => import('./pages/WeChatSettings'))
 
 function App(): React.ReactElement {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Toaster position="top-center" />
       <div className="min-h-screen bg-background">
         <React.Suspense fallback={
@@ -26,7 +26,7 @@ function App(): React.ReactElement {
           </Routes>
         </React.Suspense>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 

@@ -2,6 +2,45 @@ import { useCallback } from 'react';
 // import juice from 'juice';
 
 /**
+ * 获取图片的 MIME 类型
+ */
+const getImageMimeType = (filePath: string): string => {
+  const ext = filePath.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'png': return 'image/png';
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg';
+    case 'gif': return 'image/gif';
+    case 'webp': return 'image/webp';
+    case 'svg': return 'image/svg+xml';
+    default: return 'image/png';
+  }
+};
+
+/**
+ * 将 file:// 路径的图片转为 base64 data URI
+ */
+const convertLocalImagesToBase64 = async (element: HTMLElement): Promise<void> => {
+  if (!window.electronAPI?.readFileAsBase64) return;
+
+  const images = element.getElementsByTagName('img');
+  for (const image of Array.from(images)) {
+    const src = image.getAttribute('src');
+    if (src && src.startsWith('file://')) {
+      try {
+        const base64 = await window.electronAPI.readFileAsBase64(src);
+        if (base64) {
+          const mimeType = getImageMimeType(src);
+          image.setAttribute('src', `data:${mimeType};base64,${base64}`);
+        }
+      } catch (error) {
+        console.error('转换图片为 base64 失败:', src, error);
+      }
+    }
+  }
+};
+
+/**
  * 处理图片大小，将width/height属性转为style
  */
 const solveWeChatImage = (element: HTMLElement) => {
@@ -83,7 +122,7 @@ const executeRichCopy = (html: string): boolean => {
 
 export function useCopy() {
   // 不再需要获取主题样式字符串
-  const copyToWechat = useCallback(() => {
+  const copyToWechat = useCallback(async (): Promise<boolean> => {
     try {
       console.log('开始执行复制到微信公众号格式');
 
@@ -103,7 +142,10 @@ export function useCopy() {
       tempDiv.innerHTML = modifyHtmlStructure(html);
       solveWeChatImage(tempDiv);
 
-      // 4. 执行富文本复制
+      // 4. 将本地图片转为 base64 data URI（剪贴板可跨应用使用）
+      await convertLocalImagesToBase64(tempDiv);
+
+      // 5. 执行富文本复制
       return executeRichCopy(tempDiv.innerHTML);
     } catch (error) {
       console.error('处理复制内容时出错:', error);

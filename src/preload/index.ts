@@ -22,8 +22,10 @@ const electronAPI: ElectronAPI = {
   closeWindow: () => ipcRenderer.invoke('close-window'),
   wechatGetAccessToken: (appId: string, appSecret: string) => ipcRenderer.invoke('wechat-get-access-token', appId, appSecret),
   wechatUploadDraft: (accessToken: string, articles: WeChatDraftArticle[]) => ipcRenderer.invoke('wechat-upload-draft', accessToken, articles),
+  wechatUploadImages: (accessToken: string, imageSrcs: string[], baseDir?: string) => ipcRenderer.invoke('wechat-upload-images', accessToken, imageSrcs, baseDir),
   wechatReadConfig: () => ipcRenderer.invoke('wechat-read-config'),
   wechatWriteConfig: (config: WeChatConfig) => ipcRenderer.invoke('wechat-write-config', config),
+  readFileAsBase64: (filePath: string) => ipcRenderer.invoke('read-file-as-base64', filePath),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

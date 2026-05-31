@@ -120,6 +120,12 @@ export interface WeChatDraftResponse {
   errmsg?: string;
 }
 
+// 微信图片上传映射
+export interface WeChatImageUploadMap {
+  originalSrc: string;
+  wechatUrl: string;
+}
+
 // 工作区状态
 export interface WorkspaceState {
   rootPath: string | null;
@@ -165,11 +171,17 @@ export interface ElectronAPI {
   /** 上传图文消息草稿到微信公众号 */
   wechatUploadDraft(accessToken: string, articles: WeChatDraftArticle[]): Promise<WeChatDraftResponse>;
 
+  /** 批量上传文章中的图片到微信素材库 */
+  wechatUploadImages(accessToken: string, imageSrcs: string[], baseDir?: string): Promise<WeChatImageUploadMap[]>;
+
   /** 读取微信公众号配置 */
   wechatReadConfig(): Promise<WeChatConfig | null>;
 
   /** 保存微信公众号配置 */
   wechatWriteConfig(config: WeChatConfig): Promise<boolean>;
+
+  /** 读取本地文件并返回 base64 编码内容 */
+  readFileAsBase64(filePath: string): Promise<string | null>;
 
   /** 创建新文件，返回创建的文件路径，失败返回 null */
   createFile(dirPath: string, fileName: string): Promise<string | null>;

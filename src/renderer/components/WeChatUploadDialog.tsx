@@ -22,6 +22,7 @@ interface WeChatUploadDialogProps {
   author: string;
   digest: string;
   contentHtml: string;
+  baseDir?: string;
   onUpload: () => void;
 }
 
@@ -32,6 +33,7 @@ const WeChatUploadDialog: React.FC<WeChatUploadDialogProps> = ({
   author,
   digest,
   contentHtml,
+  baseDir,
   onUpload,
 }) => {
   const { uploadDraft } = useWeChatDraft();
@@ -57,6 +59,7 @@ const WeChatUploadDialog: React.FC<WeChatUploadDialogProps> = ({
         author: formAuthor,
         digest: formDigest,
         contentHtml,
+        baseDir,
       });
 
       if (result.success) {
