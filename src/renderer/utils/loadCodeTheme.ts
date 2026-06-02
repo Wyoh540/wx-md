@@ -25,15 +25,21 @@ export const loadCodeTheme = async (themeName: string): Promise<void> => {
   }
 
   try {
-    // 创建一个新的link元素直接引用CSS文件
+    // 使用相对路径获取CSS内容，避免打包后绝对路径在 file:// 协议下失效
+    const response = await fetch(`./styles/code/${themeName}.min.css`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const cssText = await response.text();
+
+    // 创建style元素内联CSS，确保在Electron打包后也能正确加载
     const themeId = `code-theme-${themeName}`;
-    const linkElement = document.createElement('link');
-    linkElement.id = themeId;
-    linkElement.rel = 'stylesheet';
-    linkElement.href = `/styles/code/${themeName}.min.css`;
+    const styleElement = document.createElement('style');
+    styleElement.id = themeId;
+    styleElement.textContent = cssText;
 
     // 添加到文档头部
-    document.head.appendChild(linkElement);
+    document.head.appendChild(styleElement);
 
     // 添加额外的样式规则，确保代码高亮正确应用
     const extraStyleId = `code-theme-extra-${themeName}`;
