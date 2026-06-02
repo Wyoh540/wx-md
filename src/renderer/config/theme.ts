@@ -143,6 +143,7 @@ const defaultTheme: ThemeStyles = {
       border: '1px solid rgba(148, 139, 139, 0.49)',
       fontSize: '14px',
       padding: '0.25em 0.5em',
+      textAlign: 'left',
       // color: `#3f3f3f`,
       // wordBreak: `keep-all`,
       // wordBreak: `break-word`,  // 改为break-word更友好
@@ -268,6 +269,7 @@ const graceTheme: ThemeStyles = toMerged(defaultTheme, {
     },
     td: {
       padding: '0.5em 1em',
+      textAlign: 'left',
     },
   },
 });
