@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-// import juice from 'juice';
+import { inlineContent } from 'juice/client';
 
 /**
  * 获取图片的 MIME 类型
@@ -77,11 +77,22 @@ const modifyHtmlStructure = (html: string): string => {
 };
 
 /**
- * 创建临时可编辑元素并执行复制操作
+ * 执行富文本复制到剪贴板
+ * 优先使用 Electron 原生 clipboard API 写入 text/html 格式，确保微信编辑器能正确解析
  */
-const executeRichCopy = (html: string): boolean => {
+const executeRichCopy = async (html: string): Promise<boolean> => {
   try {
-    // 创建临时容器
+    // 优先使用 Electron 原生 clipboard API 写入 HTML，确保格式正确
+    if (window.electronAPI?.writeClipboardHtml) {
+      const success = await window.electronAPI.writeClipboardHtml(html);
+      if (success) {
+        console.log('使用 Electron clipboard API 复制成功');
+        return true;
+      }
+    }
+
+    // 回退到传统 document.execCommand('copy')
+    console.warn('Electron clipboard API 不可用，回退到 execCommand');
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = html;
     tempContainer.style.position = 'fixed';
@@ -90,7 +101,6 @@ const executeRichCopy = (html: string): boolean => {
     tempContainer.setAttribute('contenteditable', 'true');
     document.body.appendChild(tempContainer);
 
-    // 选择内容
     const selection = window.getSelection();
     if (!selection) {
       throw new Error('浏览器不支持selection API');
@@ -101,10 +111,8 @@ const executeRichCopy = (html: string): boolean => {
     range.selectNodeContents(tempContainer);
     selection.addRange(range);
 
-    // 执行复制命令
     const successful = document.execCommand('copy');
 
-    // 清理
     selection.removeAllRanges();
     document.body.removeChild(tempContainer);
 
@@ -135,18 +143,29 @@ export function useCopy() {
       }
 
       // 2. 直接使用预览区的HTML内容（已经包含内联样式）
-      const html = previewElement.innerHTML;
+      let html = previewElement.innerHTML;
 
-      // 3. 修正HTML结构并处理图片
+      // 3. 将代码主题CSS内联到HTML中（微信会剥离class，必须转为内联style）
+      const codeThemeStyle = document.querySelector('style[id^="code-theme-"]');
+      if (codeThemeStyle && codeThemeStyle.textContent) {
+        try {
+          html = inlineContent(html, codeThemeStyle.textContent);
+          console.log('代码主题CSS内联成功');
+        } catch (err) {
+          console.error('CSS内联失败:', err);
+        }
+      }
+
+      // 4. 修正HTML结构并处理图片
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = modifyHtmlStructure(html);
       solveWeChatImage(tempDiv);
 
-      // 4. 将本地图片转为 base64 data URI（剪贴板可跨应用使用）
+      // 5. 将本地图片转为 base64 data URI（剪贴板可跨应用使用）
       await convertLocalImagesToBase64(tempDiv);
 
-      // 5. 执行富文本复制
-      return executeRichCopy(tempDiv.innerHTML);
+      // 6. 执行富文本复制
+      return await executeRichCopy(tempDiv.innerHTML);
     } catch (error) {
       console.error('处理复制内容时出错:', error);
       alert('复制过程中出错');

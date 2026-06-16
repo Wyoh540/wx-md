@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain } from 'electron';
 import path from 'path';
 import os from 'os';
 import { promises as fs } from 'fs';
@@ -458,6 +458,19 @@ ipcMain.handle('write-workspace-state', async (_event, state) => {
     await fs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf-8');
     return true;
   } catch {
+    return false;
+  }
+});
+
+/**
+ * IPC: 将 HTML 写入系统剪贴板
+ */
+ipcMain.handle('write-clipboard-html', async (_event, html: string) => {
+  try {
+    clipboard.writeHTML(html);
+    return true;
+  } catch (error) {
+    console.error('写入剪贴板失败:', error);
     return false;
   }
 });
