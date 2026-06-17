@@ -1,24 +1,30 @@
-import React, { useRef, useMemo, useEffect, useState, useCallback } from 'react'
-import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
-import { markdown } from '@codemirror/lang-markdown'
-import { languages } from '@codemirror/language-data'
-import { githubLight } from '@uiw/codemirror-theme-github'
-import { EditorView } from '@codemirror/view'
-import markdownExample from '../assets/example/markdown.md?raw'
-import { renderMarkdown } from '../utils/render'
-import Toolbar from '../components/Toolbar'
-import FileExplorer from '../components/FileExplorer'
-import TabBar from '../components/TabBar'
-import { useTheme, ThemeProvider } from '../contexts/ThemeContext'
-import { useCopy } from '../hooks/useCopy'
-import { useStore } from '../hooks/useStore'
-import { useTabs } from '../hooks/useTabs'
-import { useFileTree } from '../hooks/useFileTree'
-import { useWorkspaceState } from '../hooks/useWorkspaceState'
-import { useWeChatDraft } from '@/hooks/useWeChatDraft'
-import { useWeChatConfig } from '@/hooks/useWeChatConfig'
-import WeChatUploadDialog from '@/components/WeChatUploadDialog'
-import Notification from '../components/Notification'
+import React, {
+  useRef,
+  useMemo,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import CodeMirror, { ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import { markdown } from "@codemirror/lang-markdown";
+import { languages } from "@codemirror/language-data";
+import { githubLight } from "@uiw/codemirror-theme-github";
+import { EditorView } from "@codemirror/view";
+import markdownExample from "../assets/example/markdown.md?raw";
+import { renderMarkdown } from "../utils/render";
+import Toolbar from "../components/Toolbar";
+import FileExplorer from "../components/FileExplorer";
+import TabBar from "../components/TabBar";
+import { useTheme, ThemeProvider } from "../contexts/ThemeContext";
+import { useCopy } from "../hooks/useCopy";
+import { useStore } from "../hooks/useStore";
+import { useTabs } from "../hooks/useTabs";
+import { useFileTree } from "../hooks/useFileTree";
+import { useWorkspaceState } from "../hooks/useWorkspaceState";
+import { useWeChatDraft } from "@/hooks/useWeChatDraft";
+import { useWeChatConfig } from "@/hooks/useWeChatConfig";
+import WeChatUploadDialog from "@/components/WeChatUploadDialog";
+import Notification from "../components/Notification";
 import {
   Dialog,
   DialogContent,
@@ -26,8 +32,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const MarkdownEditorWithTheme: React.FC = () => {
   return (
@@ -38,8 +44,8 @@ const MarkdownEditorWithTheme: React.FC = () => {
 };
 
 const MarkdownEditor: React.FC = () => {
-  const previewRef = useRef<HTMLDivElement>(null)
-  const editorRef = useRef<ReactCodeMirrorRef>(null)
+  const previewRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<ReactCodeMirrorRef>(null);
 
   const {
     currentTheme,
@@ -49,7 +55,7 @@ const MarkdownEditor: React.FC = () => {
     getFontFamily,
     getFontSize,
     setFontFamily,
-    setFontSize
+    setFontSize,
   } = useTheme();
 
   const {
@@ -62,7 +68,7 @@ const MarkdownEditor: React.FC = () => {
     updateFontFamily,
     updateFontSize,
     updateTheme,
-    updatePreviewMode
+    updatePreviewMode,
   } = useStore();
 
   const {
@@ -101,22 +107,27 @@ const MarkdownEditor: React.FC = () => {
     setRootPath,
   } = useFileTree();
 
-  const { loadWorkspaceState, saveWorkspaceState, onSaveWorkspaceState } = useWorkspaceState();
+  const { loadWorkspaceState, saveWorkspaceState, onSaveWorkspaceState } =
+    useWorkspaceState();
 
   const [notification, setNotification] = useState<{
     visible: boolean;
     message: string;
-    type: 'success' | 'error';
-  }>({ visible: false, message: '', type: 'success' });
+    type: "success" | "error";
+  }>({ visible: false, message: "", type: "success" });
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+
   // 无标签时使用 useStore 内容；有激活标签时使用标签内容
   const markdownText = activeTab
     ? activeTab.content
-    : (content === null || content === undefined ? markdownExample : content);
+    : content === null || content === undefined
+      ? markdownExample
+      : content;
 
   const { extractTitle, extractDigest } = useWeChatDraft();
   const { config } = useWeChatConfig();
@@ -125,6 +136,19 @@ const MarkdownEditor: React.FC = () => {
   const uploadDigest = extractDigest(markdownText);
 
   const handleUploadClick = () => setUploadDialogOpen(true);
+
+  const handlePreviewImageClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "IMG") {
+        const src = target.getAttribute("src");
+        if (src) {
+          setImagePreviewUrl(src);
+        }
+      }
+    },
+    [],
+  );
 
   // 是否在 Electron 环境
   const isElectron = !!window.electronAPI;
@@ -136,7 +160,14 @@ const MarkdownEditor: React.FC = () => {
       setPrimaryColor(settings.themeColor);
       setTheme(settings.currentTheme);
     }
-  }, [isLoaded, settings, setFontFamily, setFontSize, setPrimaryColor, setTheme]);
+  }, [
+    isLoaded,
+    settings,
+    setFontFamily,
+    setFontSize,
+    setPrimaryColor,
+    setTheme,
+  ]);
 
   // 恢复工作区状态
   useEffect(() => {
@@ -150,7 +181,7 @@ const MarkdownEditor: React.FC = () => {
           setRootPath(state.rootPath);
           await loadDirectory(state.rootPath);
         } catch {
-          console.warn('工作区目录已不存在:', state.rootPath);
+          console.warn("工作区目录已不存在:", state.rootPath);
         }
       }
 
@@ -171,7 +202,7 @@ const MarkdownEditor: React.FC = () => {
     const unsubscribe = onSaveWorkspaceState(async () => {
       const state = {
         rootPath: rootPath ?? null,
-        openFilePaths: tabs.map(t => t.filePath),
+        openFilePaths: tabs.map((t) => t.filePath),
         activeFilePath: activeTab?.filePath ?? null,
       };
       await saveWorkspaceState(state);
@@ -181,48 +212,59 @@ const MarkdownEditor: React.FC = () => {
     return unsubscribe;
   }, [rootPath, tabs, activeTab, saveWorkspaceState, onSaveWorkspaceState]);
 
-  const handleContentChange = useCallback((value: string) => {
-    if (activeTabId) {
-      setTabContent(activeTabId, value);
-    } else {
-      saveContent(value);
-    }
-  }, [activeTabId, setTabContent, saveContent]);
+  const handleContentChange = useCallback(
+    (value: string) => {
+      if (activeTabId) {
+        setTabContent(activeTabId, value);
+      } else {
+        saveContent(value);
+      }
+    },
+    [activeTabId, setTabContent, saveContent],
+  );
 
   // Ctrl+S 保存当前标签
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's' && activeTabId) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s" && activeTabId) {
         e.preventDefault();
         void saveTab(activeTabId);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeTabId, saveTab]);
 
-  const baseDir = activeTab?.filePath ? activeTab.filePath.replace(/[\\/][^\\/]*$/, '') : undefined;
+  const baseDir = activeTab?.filePath
+    ? activeTab.filePath.replace(/[\\/][^\\/]*$/, "")
+    : undefined;
 
   const handleCopyToWechat = async () => {
     const result = await copyToWechat();
     setNotification({
       visible: true,
       message: result
-        ? '已复制为微信公众号格式，可直接到公众号后台粘贴'
-        : '复制失败，请重试',
-      type: result ? 'success' : 'error',
+        ? "已复制为微信公众号格式，可直接到公众号后台粘贴"
+        : "复制失败，请重试",
+      type: result ? "success" : "error",
     });
   };
 
   const handleCloseNotification = () => {
-    setNotification(prev => ({ ...prev, visible: false }));
+    setNotification((prev) => ({ ...prev, visible: false }));
   };
 
   const renderedMarkdown = useMemo(() => {
     const themeStyles = getThemeConfig();
     const currentFontFamily = getFontFamily();
     const currentFontSize = getFontSize();
-    return renderMarkdown(markdownText, themeStyles, currentFontFamily, currentFontSize, baseDir);
+    return renderMarkdown(
+      markdownText,
+      themeStyles,
+      currentFontFamily,
+      currentFontSize,
+      baseDir,
+    );
   }, [markdownText, getThemeConfig, getFontFamily, getFontSize, baseDir]);
 
   // 缓存已转换为 base64 的本地图片，避免重复读取文件
@@ -232,38 +274,48 @@ const MarkdownEditor: React.FC = () => {
   // 开发模式下页面通过 http://localhost 加载，无法直接显示 file:// 图片
   useEffect(() => {
     const convertImages = async () => {
-      const previewDiv = document.getElementById('output');
+      const previewDiv = document.getElementById("output");
       if (!previewDiv) return;
 
-      const imgs = previewDiv.querySelectorAll('img');
+      const imgs = previewDiv.querySelectorAll("img");
       for (const img of Array.from(imgs)) {
-        const src = img.getAttribute('src');
-        if (!src || !src.startsWith('file://')) continue;
+        const src = img.getAttribute("src");
+        if (!src || !src.startsWith("file://")) continue;
 
         // 缓存命中：直接复用
         if (imageCacheRef.current[src]) {
-          img.setAttribute('src', imageCacheRef.current[src]);
+          img.setAttribute("src", imageCacheRef.current[src]);
+          img.style.cursor = "pointer";
           continue;
         }
 
         try {
           const base64 = await window.electronAPI?.readFileAsBase64(src);
           if (base64) {
-            const ext = src.split('.').pop()?.toLowerCase() || 'png';
+            const ext = src.split(".").pop()?.toLowerCase() || "png";
             const mimeType =
-              ext === 'jpg' || ext === 'jpeg'
-                ? 'image/jpeg'
-                : ext === 'gif'
-                  ? 'image/gif'
-                  : ext === 'svg'
-                    ? 'image/svg+xml'
-                    : 'image/png';
+              ext === "jpg" || ext === "jpeg"
+                ? "image/jpeg"
+                : ext === "gif"
+                  ? "image/gif"
+                  : ext === "svg"
+                    ? "image/svg+xml"
+                    : "image/png";
             const dataUrl = `data:${mimeType};base64,${base64}`;
             imageCacheRef.current[src] = dataUrl;
-            img.setAttribute('src', dataUrl);
+            img.setAttribute("src", dataUrl);
+            img.style.cursor = "pointer";
           }
         } catch (error) {
-          console.error('转换预览图片失败:', src, error);
+          console.error("转换预览图片失败:", src, error);
+        }
+      }
+
+      // 为非 file:// 图片（网络图片、data URI）也添加点击提示
+      for (const img of Array.from(imgs)) {
+        const src = img.getAttribute("src");
+        if (src && !src.startsWith("file://") && !img.style.cursor) {
+          img.style.cursor = "pointer";
         }
       }
     };
@@ -294,7 +346,7 @@ const MarkdownEditor: React.FC = () => {
         }}
         codeTheme={settings.codeTheme}
         setCodeTheme={updateCodeTheme}
-        previewMode={settings.previewMode || 'responsive'}
+        previewMode={settings.previewMode || "responsive"}
         togglePreviewMode={updatePreviewMode}
         copyAsWechat={handleCopyToWechat}
         content={markdownText}
@@ -309,8 +361,8 @@ const MarkdownEditor: React.FC = () => {
           <div
             className={
               sidebarCollapsed
-                ? 'w-0 overflow-hidden'
-                : 'w-60 min-w-[240px] flex flex-col border-r'
+                ? "w-0 overflow-hidden"
+                : "w-60 min-w-[240px] flex flex-col border-r"
             }
           >
             {!sidebarCollapsed && (
@@ -341,10 +393,10 @@ const MarkdownEditor: React.FC = () => {
         {isElectron && (
           <button
             className="flex items-center justify-center w-3.5 bg-muted border-r hover:bg-accent transition-colors text-muted-foreground text-xs"
-            onClick={() => setSidebarCollapsed(v => !v)}
-            title={sidebarCollapsed ? '展开资源管理器' : '折叠资源管理器'}
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            title={sidebarCollapsed ? "展开资源管理器" : "折叠资源管理器"}
           >
-            {sidebarCollapsed ? '›' : '‹'}
+            {sidebarCollapsed ? "›" : "‹"}
           </button>
         )}
 
@@ -384,15 +436,16 @@ const MarkdownEditor: React.FC = () => {
             >
               <div
                 className={
-                  settings.previewMode === 'mobile'
-                    ? 'w-[375px] mx-auto min-h-full p-4 border-x shadow-sm bg-background'
-                    : 'max-w-[900px] mx-auto min-h-full p-4 border-x shadow-sm bg-background'
+                  settings.previewMode === "mobile"
+                    ? "w-[375px] mx-auto min-h-full p-4 border-x shadow-sm bg-background"
+                    : "max-w-[900px] mx-auto min-h-full p-4 border-x shadow-sm bg-background"
                 }
               >
                 <div
                   id="output"
                   className="markdown-preview"
                   dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
+                  onClick={handlePreviewImageClick}
                 />
               </div>
             </div>
@@ -401,12 +454,16 @@ const MarkdownEditor: React.FC = () => {
       </div>
 
       {/* 未保存关闭确认对话框 */}
-      <Dialog open={!!confirmDialog} onOpenChange={(open) => !open && cancelCloseTab()}>
+      <Dialog
+        open={!!confirmDialog}
+        onOpenChange={(open) => !open && cancelCloseTab()}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>关闭未保存文件</DialogTitle>
             <DialogDescription>
-              {confirmDialog && `"${confirmDialog.title}" 有未保存的更改，确定关闭？`}
+              {confirmDialog &&
+                `"${confirmDialog.title}" 有未保存的更改，确定关闭？`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -427,15 +484,41 @@ const MarkdownEditor: React.FC = () => {
         author={config.author}
         digest={uploadDigest}
         contentHtml={renderedMarkdown}
-        baseDir={activeTab?.filePath ? activeTab.filePath.replace(/[\\/][^\\/]*$/, '') : undefined}
+        baseDir={
+          activeTab?.filePath
+            ? activeTab.filePath.replace(/[\\/][^\\/]*$/, "")
+            : undefined
+        }
         onUpload={() => {
           setNotification({
             visible: true,
-            message: '文章已上传到微信公众号草稿箱',
-            type: 'success',
+            message: "文章已上传到微信公众号草稿箱",
+            type: "success",
           });
         }}
       />
+
+      {/* 图片预览对话框 */}
+      <Dialog
+        open={imagePreviewUrl !== null}
+        onOpenChange={(open) => {
+          if (!open) setImagePreviewUrl(null);
+        }}
+      >
+        <DialogContent className="max-w-[85vw] max-h-[85vh] p-0 overflow-hidden flex items-center justify-center">
+          <DialogHeader className="sr-only">
+            <DialogTitle>图片预览</DialogTitle>
+            <DialogDescription>点击遮罩或按 Escape 键关闭预览</DialogDescription>
+          </DialogHeader>
+          {imagePreviewUrl && (
+            <img
+              src={imagePreviewUrl}
+              alt="预览图片"
+              className="max-w-[80vw] max-h-[75vh] object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

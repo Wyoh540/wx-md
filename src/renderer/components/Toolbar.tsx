@@ -24,7 +24,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 import {
   Monitor,
   Smartphone,
@@ -44,6 +43,7 @@ import {
   Settings,
   Upload,
 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 
 interface ToolbarProps {
@@ -252,27 +252,19 @@ const Toolbar = ({
           )}
 
           {/* 预览模式 */}
-          <div className="flex items-center rounded-md border bg-muted p-1">
-            {previewModes.map(({ mode, label, icon, title }) => (
-              <Tooltip key={mode}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={previewMode === mode ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => togglePreviewMode(mode)}
-                    className={cn(
-                      "h-7 gap-1 px-2 text-xs",
-                      previewMode === mode && "bg-background shadow-sm"
-                    )}
-                  >
-                    {icon}
-                    {label}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{title}</TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
+          <Tabs
+            value={previewMode}
+            onValueChange={(value) => togglePreviewMode(value as PreviewMode)}
+          >
+            <TabsList>
+              {previewModes.map(({ mode, label, icon }) => (
+                <TabsTrigger key={mode} value={mode} className="gap-1">
+                  {icon}
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
           <Separator orientation="vertical" className="mx-1 h-6" />
 

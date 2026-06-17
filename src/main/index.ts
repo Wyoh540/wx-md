@@ -2,6 +2,7 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain } from 'electron';
 import path from 'path';
 import os from 'os';
 import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
 import started from 'electron-squirrel-startup';
 import { getPreloadScriptPath } from './preloadPath';
 import {
@@ -427,8 +428,8 @@ ipcMain.handle('rename-directory', async (_event, dirPath: string, newName: stri
  */
 ipcMain.handle('read-file-as-base64', async (_event, filePath: string) => {
   try {
-    // 移除 file:// 前缀
-    const cleanPath = filePath.replace(/^file:\/\//, '');
+    // 使用 fileURLToPath 正确转换 file:// URL 为本地路径
+    const cleanPath = filePath.startsWith('file://') ? fileURLToPath(filePath) : filePath;
     const data = await fs.readFile(cleanPath);
     return data.toString('base64');
   } catch (error) {

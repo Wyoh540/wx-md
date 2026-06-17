@@ -579,7 +579,8 @@ const adjustFirstParagraphMargin = (html: string): string => {
 const sanitizeHtml = (html: string): string => {
   return DOMPurify.sanitize(html, {
     ADD_TAGS: ['use'], // 允许SVG use标签
-    ADD_ATTR: ['href', 'xlink:href', 'class', 'style', 'data-index'] // 允许SVG链接属性等
+    ADD_ATTR: ['href', 'xlink:href', 'class', 'style', 'data-index'], // 允许SVG链接属性等
+    ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|xxx|file|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i
   });
 };
 
