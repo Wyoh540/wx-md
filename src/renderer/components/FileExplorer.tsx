@@ -42,6 +42,8 @@ interface FileExplorerProps {
   renameFile: (filePath: string, newName: string) => Promise<boolean>;
   renameDirectory: (dirPath: string, newName: string) => Promise<boolean>;
   setActiveFolderPath: (path: string | null) => void;
+  selectedPath: string | null;
+  onSelectedPathChange: (path: string | null) => void;
 }
 
 const getParentDir = (p: string) => {
@@ -67,6 +69,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   renameFile,
   renameDirectory,
   setActiveFolderPath,
+  selectedPath,
+  onSelectedPathChange,
 }) => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createType, setCreateType] = useState<'file' | 'folder'>('file');
@@ -80,16 +84,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
 
   const contextMenuNodeRef = useRef<FileNode | null>(null);
 
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
-
   const rootName = rootPath ? rootPath.split(/[\\/]/).pop() : null;
 
   // 同步标签页的激活文件到资源管理器选中状态
   useEffect(() => {
     if (activeFilePath) {
-      setSelectedPath(activeFilePath);
+      onSelectedPathChange(activeFilePath);
     }
-  }, [activeFilePath]);
+  }, [activeFilePath, onSelectedPathChange]);
 
   const handleCreateFile = () => {
     if (!rootPath) return;
@@ -271,15 +273,15 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                     expandedPaths={expandedPaths}
                     onToggle={toggleExpand}
                     onFileClick={(path) => {
-                      setSelectedPath(path);
+                      onSelectedPathChange(path);
                       onFileOpen(path);
                     }}
                     onFolderClick={(path) => {
-                      setSelectedPath(path);
+                      onSelectedPathChange(path);
                       setActiveFolderPath(path);
                     }}
                     onContextMenu={handleContextMenu}
-                    onSelect={setSelectedPath}
+                    onSelect={onSelectedPathChange}
                     selectedPath={selectedPath}
                   />
                 </div>

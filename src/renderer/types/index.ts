@@ -131,6 +131,8 @@ export interface WorkspaceState {
   rootPath: string | null;
   openFilePaths: string[];
   activeFilePath: string | null;
+  expandedPaths: string[];
+  selectedPath: string | null;
 }
 
 /**

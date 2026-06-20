@@ -145,5 +145,6 @@ export const useFileTree = () => {
     renameDirectory,
     setActiveFolderPath,
     setRootPath,
+    setExpandedPaths,
   };
 };

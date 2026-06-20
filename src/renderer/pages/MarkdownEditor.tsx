@@ -12,6 +12,7 @@ import { githubLight } from "@uiw/codemirror-theme-github";
 import { EditorView } from "@codemirror/view";
 import markdownExample from "../assets/example/markdown.md?raw";
 import { renderMarkdown } from "../utils/render";
+import { isImageFile, isEditableFile, getImageMimeType } from "../utils/fileKind";
 import Toolbar from "../components/Toolbar";
 import FileExplorer from "../components/FileExplorer";
 import TabBar from "../components/TabBar";
@@ -105,6 +106,7 @@ const MarkdownEditor: React.FC = () => {
     renameDirectory,
     setActiveFolderPath,
     setRootPath,
+    setExpandedPaths,
   } = useFileTree();
 
   const { loadWorkspaceState, saveWorkspaceState, onSaveWorkspaceState } =
@@ -121,6 +123,8 @@ const MarkdownEditor: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   // 无标签时使用 useStore 内容；有激活标签时使用标签内容
   const markdownText = activeTab
@@ -148,6 +152,28 @@ const MarkdownEditor: React.FC = () => {
       }
     },
     [],
+  );
+
+  const handleFileOpen = useCallback(
+    async (filePath: string) => {
+      if (!filePath) return;
+      if (isImageFile(filePath)) {
+        try {
+          const base64 = await window.electronAPI?.readFileAsBase64(filePath);
+          if (base64) {
+            const mimeType = getImageMimeType(filePath);
+            setImagePreviewUrl(`data:${mimeType};base64,${base64}`);
+          }
+        } catch (error) {
+          console.error("预览图片失败:", filePath, error);
+        }
+        return;
+      }
+      if (isEditableFile(filePath)) {
+        await openTabFile(filePath);
+      }
+    },
+    [openTabFile],
   );
 
   // 是否在 Electron 环境
@@ -191,6 +217,16 @@ const MarkdownEditor: React.FC = () => {
           await openTabFile(filePath);
         }
       }
+
+      // 恢复文件树展开状态
+      if (state.expandedPaths && state.expandedPaths.length > 0) {
+        setExpandedPaths(new Set(state.expandedPaths));
+      }
+
+      // 恢复文件树选中状态
+      if (state.selectedPath) {
+        setSelectedPath(state.selectedPath);
+      }
     };
 
     void restoreWorkspace();
@@ -204,13 +240,15 @@ const MarkdownEditor: React.FC = () => {
         rootPath: rootPath ?? null,
         openFilePaths: tabs.map((t) => t.filePath),
         activeFilePath: activeTab?.filePath ?? null,
+        expandedPaths: Array.from(expandedPaths),
+        selectedPath: selectedPath ?? null,
       };
       await saveWorkspaceState(state);
       await window.electronAPI?.closeWindow();
     });
 
     return unsubscribe;
-  }, [rootPath, tabs, activeTab, saveWorkspaceState, onSaveWorkspaceState]);
+  }, [rootPath, tabs, activeTab, expandedPaths, selectedPath, saveWorkspaceState, onSaveWorkspaceState]);
 
   const handleContentChange = useCallback(
     (value: string) => {
@@ -367,7 +405,7 @@ const MarkdownEditor: React.FC = () => {
           >
             {!sidebarCollapsed && (
               <FileExplorer
-                onFileOpen={(filePath) => void openTabFile(filePath)}
+                onFileOpen={(filePath) => void handleFileOpen(filePath)}
                 activeFilePath={activeTab?.filePath}
                 rootPath={rootPath}
                 tree={tree}
@@ -384,6 +422,8 @@ const MarkdownEditor: React.FC = () => {
                 renameFile={renameFile}
                 renameDirectory={renameDirectory}
                 setActiveFolderPath={setActiveFolderPath}
+                selectedPath={selectedPath}
+                onSelectedPathChange={setSelectedPath}
               />
             )}
           </div>

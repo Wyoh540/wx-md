@@ -1,21 +1,6 @@
 import { useCallback } from 'react';
 import { inlineContent } from 'juice/client';
-
-/**
- * 获取图片的 MIME 类型
- */
-const getImageMimeType = (filePath: string): string => {
-  const ext = filePath.split('.').pop()?.toLowerCase();
-  switch (ext) {
-    case 'png': return 'image/png';
-    case 'jpg':
-    case 'jpeg': return 'image/jpeg';
-    case 'gif': return 'image/gif';
-    case 'webp': return 'image/webp';
-    case 'svg': return 'image/svg+xml';
-    default: return 'image/png';
-  }
-};
+import { getImageMimeType } from '@/utils/fileKind';
 
 /**
  * 将 file:// 路径的图片转为 base64 data URI

@@ -1,9 +1,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import type { FileNode } from '@/types';
-import { FileText, ChevronRight, ChevronDown } from 'lucide-react';
-
-const CLICKABLE_EXTENSIONS = /\.(md|markdown|txt)$/i;
+import { FileText, Image, ChevronRight, ChevronDown } from 'lucide-react';
+import { isImageFile, isEditableFile } from '@/utils/fileKind';
 
 interface FileTreeNodeProps {
   node: FileNode;
@@ -31,7 +30,8 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = React.memo(({
   selectedPath,
 }) => {
   const isActive = node.path === selectedPath;
-  const isClickable = node.type === 'file' && CLICKABLE_EXTENSIONS.test(node.name);
+  const isClickable = node.type === 'file' && (isEditableFile(node.name) || isImageFile(node.name));
+  const isImage = node.type === 'file' && isImageFile(node.name);
 
   const handleClick = () => {
     onSelect(node.path);
@@ -65,6 +65,8 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = React.memo(({
         <span className="flex-shrink-0 w-4 flex items-center justify-center text-muted-foreground">
           {node.type === 'directory' ? (
             isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />
+          ) : isImage ? (
+            <Image className="h-3.5 w-3.5" />
           ) : (
             <FileText className="h-3.5 w-3.5" />
           )}
