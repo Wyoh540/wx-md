@@ -211,7 +211,8 @@ const generateFootnoteContent = (footnotes: FootnoteLink[]): string => {
 export const createMarkdownRenderer = (
   themeStyles?: ThemeStyles,
   baseStyles: string = '',
-  baseDir?: string
+  baseDir?: string,
+  lineMap?: number[]
 ): RendererResult => {
   // 存储引用链接
   const footnotes: FootnoteLink[] = [];
@@ -252,6 +253,14 @@ export const createMarkdownRenderer = (
   // 用于同步滚动的 heading 索引计数器
   let headingIndex = 0;
 
+  // 行号映射索引，按顺序消费 lineMap
+  let lineMapIndex = 0;
+  const consumeLine = (): number | undefined => {
+    const line = lineMap?.[lineMapIndex];
+    lineMapIndex++;
+    return line;
+  };
+
   // 构建Markdown渲染器
   const renderer: RendererObject = {
     // 文本
@@ -266,9 +275,11 @@ export const createMarkdownRenderer = (
 
     // 段落
     paragraph(text) {
+      const line = consumeLine();
       return createElement({
         styleKey: 'p',
-        content: text
+        content: text,
+        attributes: line !== undefined ? { 'data-line': String(line) } : undefined
       });
     },
 
@@ -276,11 +287,13 @@ export const createMarkdownRenderer = (
     heading(text, level) {
       const headingKey = `h${level}`;
       const idx = headingIndex++;
+      const line = consumeLine();
       return createElement({
         styleKey: headingKey,
         content: text,
         attributes: {
-          id: `sync-h-${idx}`
+          id: `sync-h-${idx}`,
+          'data-line': line !== undefined ? String(line) : undefined
         }
       });
     },
@@ -302,18 +315,22 @@ export const createMarkdownRenderer = (
           (_, attrs) => `<p${attrs || ''} style="${blockquotePStyle}">`);
       }
 
+      const line = consumeLine();
       return createElement({
         styleKey: 'blockquote',
-        content: processedQuote
+        content: processedQuote,
+        attributes: line !== undefined ? { 'data-line': String(line) } : undefined
       });
     },
 
     // 列表
     list(body, ordered) {
       const styleKey = ordered ? 'ol' : 'ul';
+      const line = consumeLine();
       return createElement({
         styleKey: styleKey,
-        content: body
+        content: body,
+        attributes: line !== undefined ? { 'data-line': String(line) } : undefined
       });
     },
 
@@ -405,9 +422,11 @@ export const createMarkdownRenderer = (
 
     // 表格
     table(header, body) {
+      const line = consumeLine();
       return createElement({
         styleKey: 'table',
-        content: `<thead>${header}</thead><tbody>${body}</tbody>`
+        content: `<thead>${header}</thead><tbody>${body}</tbody>`,
+        attributes: line !== undefined ? { 'data-line': String(line) } : undefined
       });
     },
 
@@ -447,10 +466,12 @@ export const createMarkdownRenderer = (
 
     // 分割线
     hr() {
+      const line = consumeLine();
       return createElement({
         styleKey: 'hr',
         content: '',
-        tagName: 'hr'
+        tagName: 'hr',
+        attributes: line !== undefined ? { 'data-line': String(line) } : undefined
       });
     },
 
@@ -505,11 +526,15 @@ export const createMarkdownRenderer = (
       const macIconSpan = `<span class="mac-sign" style="padding:4px;display:flex;">${MAC_CODE_SVG}</span>`;
 
       // 返回完整代码块
+      const line = consumeLine();
       return createElement({
         styleKey: 'pre_code',
         content: macIconSpan + preContent,
         tagName: 'pre',
-        attributes: {class: 'hljs'}
+        attributes: {
+          class: 'hljs',
+          'data-line': line !== undefined ? String(line) : undefined
+        }
       });
     }
   };
@@ -539,8 +564,22 @@ export const renderMarkdown = (
   // 创建基础样式
   const baseStyles = createBaseStyles(themeStyles, fontFamily, fontSize);
 
+  // 预扫描 token 列表，提取每个块级元素的起始行号
+  const tokens = marked.lexer(markdownText);
+  let currentOffset = 0;
+  const lineMap: number[] = [];
+  for (const token of tokens) {
+    if (token.type === 'space') continue;
+    const idx = markdownText.indexOf(token.raw, currentOffset);
+    if (idx !== -1) {
+      const startLine = markdownText.substring(0, idx).split('\n').length;
+      lineMap.push(startLine);
+      currentOffset = idx + token.raw.length;
+    }
+  }
+
   // 获取渲染器和脚注处理器
-  const { renderer, generateFootnotesHtml } = createMarkdownRenderer(themeStyles, baseStyles, baseDir);
+  const { renderer, generateFootnotesHtml } = createMarkdownRenderer(themeStyles, baseStyles, baseDir, lineMap);
 
   // 配置渲染器
   marked.use({ renderer });
@@ -586,7 +625,7 @@ const adjustFirstParagraphMargin = (html: string): string => {
 const sanitizeHtml = (html: string): string => {
   return DOMPurify.sanitize(html, {
     ADD_TAGS: ['use'], // 允许SVG use标签
-    ADD_ATTR: ['href', 'xlink:href', 'class', 'style', 'data-index', 'id'], // 允许SVG链接属性等 + 同步滚动id
+    ADD_ATTR: ['href', 'xlink:href', 'class', 'style', 'data-index', 'id', 'data-line'], // 允许SVG链接属性等 + 同步滚动属性
     ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|xxx|file|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i
   });
 };

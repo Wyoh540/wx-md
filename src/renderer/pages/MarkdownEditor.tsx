@@ -305,19 +305,7 @@ const MarkdownEditor: React.FC = () => {
     );
   }, [markdownText, getThemeConfig, getFontFamily, getFontSize, baseDir]);
 
-  // 提取 heading 行号映射，用于编辑器↔预览同步滚动
-  const headingLineMap = useMemo(() => {
-    const map: { line: number; index: number }[] = [];
-    const lines = markdownText.split('\n');
-    let index = 0;
-    for (let i = 0; i < lines.length; i++) {
-      if (/^#{1,6}\s/.test(lines[i])) {
-        map.push({ line: i + 1, index });
-        index++;
-      }
-    }
-    return map;
-  }, [markdownText]);
+
 
   // 缓存已转换为 base64 的本地图片，避免重复读取文件
   const imageCacheRef = useRef<Record<string, string>>({});
@@ -375,7 +363,7 @@ const MarkdownEditor: React.FC = () => {
     void convertImages();
   }, [renderedMarkdown]);
 
-  // 编辑器滚动同步预览区位置
+  // 编辑器滚动同步预览区位置（像素级行对齐）
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     let timer: ReturnType<typeof setTimeout>;
@@ -388,56 +376,128 @@ const MarkdownEditor: React.FC = () => {
         return;
       }
 
-      let isEditorScrolling = false;
+      let rafId: number | null = null;
+      let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+      let isUserScrolling = false;
+      let isFocusMode = false;
+      let focusTimer: ReturnType<typeof setTimeout> | null = null;
+      let lastCursorLine = -1;
 
-      const syncPreview = () => {
-        if (isEditorScrolling) return;
-        isEditorScrolling = true;
+      const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
-        // 使用 viewport.from 获取当前视口顶部附近的文档位置
-        const topPos = view.viewport.from;
-        const topLine = view.state.doc.lineAt(topPos).number;
-
-        // 找到大于等于当前行号的最近 heading
-        let targetIndex = -1;
-        for (let i = 0; i < headingLineMap.length; i++) {
-          if (headingLineMap[i].line >= topLine) {
-            targetIndex = headingLineMap[i].index;
-            break;
+      const animateScroll = (from: number, to: number, duration: number) => {
+        const startTime = performance.now();
+        const step = (now: number) => {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = easeOutCubic(progress);
+          previewEl.scrollTop = from + (to - from) * eased;
+          if (progress < 1 && !isUserScrolling) {
+            rafId = requestAnimationFrame(step);
+          } else {
+            rafId = null;
           }
-        }
-
-        if (targetIndex === -1 && headingLineMap.length > 0) {
-          targetIndex = headingLineMap[headingLineMap.length - 1].index;
-        }
-
-        if (targetIndex >= 0) {
-          const targetEl = previewEl.querySelector(`#sync-h-${targetIndex}`);
-          if (targetEl) {
-            const previewRect = previewEl.getBoundingClientRect();
-            const targetRect = targetEl.getBoundingClientRect();
-            const offset =
-              targetRect.top - previewRect.top + previewEl.scrollTop;
-            previewEl.scrollTop = offset;
-          }
-        } else {
-          // 没有 heading，回退到百分比映射
-          const scrollRatio =
-            view.scrollDOM.scrollTop /
-            (view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight || 1);
-          const previewScrollHeight =
-            previewEl.scrollHeight - previewEl.clientHeight || 1;
-          previewEl.scrollTop = scrollRatio * previewScrollHeight;
-        }
-
-        requestAnimationFrame(() => {
-          isEditorScrolling = false;
-        });
+        };
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(step);
       };
 
-      view.scrollDOM.addEventListener('scroll', syncPreview);
+      // 获取预览区中 data-line 最接近目标行号的元素
+      const findElementByLine = (targetLine: number): HTMLElement | null => {
+        const elements = Array.from(previewEl.querySelectorAll<HTMLElement>('[data-line]'));
+        let closest: HTMLElement | null = null;
+        let closestDiff = Infinity;
+        for (const el of elements) {
+          const line = parseInt(el.getAttribute('data-line') || '0', 10);
+          const diff = Math.abs(line - targetLine);
+          if (diff < closestDiff) {
+            closestDiff = diff;
+            closest = el;
+          }
+        }
+        return closest;
+      };
+
+      // 默认模式：编辑器视口顶部行号 → 预览区元素顶部对齐
+      const syncDefault = (): number => {
+        const topPos = view.viewport.from;
+        const topLine = view.state.doc.lineAt(topPos).number;
+        const el = findElementByLine(topLine);
+        if (el) {
+          return el.offsetTop;
+        }
+        // 回退到百分比
+        const scrollRatio = view.scrollDOM.scrollTop /
+          (view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight || 1);
+        return scrollRatio * (previewEl.scrollHeight - previewEl.clientHeight || 1);
+      };
+
+      // 焦点模式：光标所在行 → 预览区元素与光标在同一视口位置
+      const syncFocus = (): number => {
+        const cursorPos = view.state.selection.main.head;
+        const cursorLine = view.state.doc.lineAt(cursorPos).number;
+        const coords = view.coordsAtPos(cursorPos);
+        const editorRect = view.scrollDOM.getBoundingClientRect();
+
+        // 光标在编辑器视口中的垂直偏移（相对于视口顶部）
+        let cursorOffset = 0;
+        if (coords) {
+          cursorOffset = Math.max(0, coords.top - editorRect.top);
+        }
+
+        const el = findElementByLine(cursorLine);
+        if (el) {
+          // 预览区目标滚动位置 = 元素 offsetTop - 光标在编辑器中的偏移
+          return Math.max(0, el.offsetTop - cursorOffset);
+        }
+        return syncDefault();
+      };
+
+      const performSync = () => {
+        const current = previewEl.scrollTop;
+        const target = isFocusMode ? syncFocus() : syncDefault();
+        if (Math.abs(target - current) > 1) {
+          animateScroll(current, target, isFocusMode ? 120 : 150);
+        }
+      };
+
+      const onEditorScroll = () => {
+        isUserScrolling = true;
+        if (debounceTimer) clearTimeout(debounceTimer);
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+
+        debounceTimer = setTimeout(() => {
+          isUserScrolling = false;
+          performSync();
+        }, 80);
+      };
+
+      // 检测光标变化，进入焦点模式
+      const checkCursor = () => {
+        const cursorPos = view.state.selection.main.head;
+        const cursorLine = view.state.doc.lineAt(cursorPos).number;
+        if (cursorLine !== lastCursorLine) {
+          lastCursorLine = cursorLine;
+          isFocusMode = true;
+          if (focusTimer) clearTimeout(focusTimer);
+          focusTimer = setTimeout(() => { isFocusMode = false; }, 3000);
+
+          if (debounceTimer) clearTimeout(debounceTimer);
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+          performSync();
+        }
+      };
+
+      // 轮询检测光标位置（100ms）
+      const intervalId = setInterval(checkCursor, 100);
+
+      view.scrollDOM.addEventListener('scroll', onEditorScroll, { passive: true });
       cleanup = () => {
-        view.scrollDOM.removeEventListener('scroll', syncPreview);
+        view.scrollDOM.removeEventListener('scroll', onEditorScroll);
+        clearInterval(intervalId);
+        if (debounceTimer) clearTimeout(debounceTimer);
+        if (focusTimer) clearTimeout(focusTimer);
+        if (rafId) cancelAnimationFrame(rafId);
       };
     };
 
@@ -446,7 +506,7 @@ const MarkdownEditor: React.FC = () => {
       clearTimeout(timer);
       cleanup?.();
     };
-  }, [editorRef, previewRef, headingLineMap]);
+  }, [editorRef, previewRef]);
 
   return (
     <div className="flex flex-col h-screen bg-background">
