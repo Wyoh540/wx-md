@@ -305,6 +305,20 @@ const MarkdownEditor: React.FC = () => {
     );
   }, [markdownText, getThemeConfig, getFontFamily, getFontSize, baseDir]);
 
+  // 提取 heading 行号映射，用于编辑器↔预览同步滚动
+  const headingLineMap = useMemo(() => {
+    const map: { line: number; index: number }[] = [];
+    const lines = markdownText.split('\n');
+    let index = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (/^#{1,6}\s/.test(lines[i])) {
+        map.push({ line: i + 1, index });
+        index++;
+      }
+    }
+    return map;
+  }, [markdownText]);
+
   // 缓存已转换为 base64 的本地图片，避免重复读取文件
   const imageCacheRef = useRef<Record<string, string>>({});
 
@@ -360,6 +374,79 @@ const MarkdownEditor: React.FC = () => {
 
     void convertImages();
   }, [renderedMarkdown]);
+
+  // 编辑器滚动同步预览区位置
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const setup = () => {
+      const view = editorRef.current?.view;
+      const previewEl = previewRef.current;
+      if (!view || !previewEl) {
+        timer = setTimeout(setup, 100);
+        return;
+      }
+
+      let isEditorScrolling = false;
+
+      const syncPreview = () => {
+        if (isEditorScrolling) return;
+        isEditorScrolling = true;
+
+        // 使用 viewport.from 获取当前视口顶部附近的文档位置
+        const topPos = view.viewport.from;
+        const topLine = view.state.doc.lineAt(topPos).number;
+
+        // 找到大于等于当前行号的最近 heading
+        let targetIndex = -1;
+        for (let i = 0; i < headingLineMap.length; i++) {
+          if (headingLineMap[i].line >= topLine) {
+            targetIndex = headingLineMap[i].index;
+            break;
+          }
+        }
+
+        if (targetIndex === -1 && headingLineMap.length > 0) {
+          targetIndex = headingLineMap[headingLineMap.length - 1].index;
+        }
+
+        if (targetIndex >= 0) {
+          const targetEl = previewEl.querySelector(`#sync-h-${targetIndex}`);
+          if (targetEl) {
+            const previewRect = previewEl.getBoundingClientRect();
+            const targetRect = targetEl.getBoundingClientRect();
+            const offset =
+              targetRect.top - previewRect.top + previewEl.scrollTop;
+            previewEl.scrollTop = offset;
+          }
+        } else {
+          // 没有 heading，回退到百分比映射
+          const scrollRatio =
+            view.scrollDOM.scrollTop /
+            (view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight || 1);
+          const previewScrollHeight =
+            previewEl.scrollHeight - previewEl.clientHeight || 1;
+          previewEl.scrollTop = scrollRatio * previewScrollHeight;
+        }
+
+        requestAnimationFrame(() => {
+          isEditorScrolling = false;
+        });
+      };
+
+      view.scrollDOM.addEventListener('scroll', syncPreview);
+      cleanup = () => {
+        view.scrollDOM.removeEventListener('scroll', syncPreview);
+      };
+    };
+
+    setup();
+    return () => {
+      clearTimeout(timer);
+      cleanup?.();
+    };
+  }, [editorRef, previewRef, headingLineMap]);
 
   return (
     <div className="flex flex-col h-screen bg-background">

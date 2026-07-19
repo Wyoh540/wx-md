@@ -249,6 +249,9 @@ export const createMarkdownRenderer = (
     return heading + content;
   };
 
+  // 用于同步滚动的 heading 索引计数器
+  let headingIndex = 0;
+
   // 构建Markdown渲染器
   const renderer: RendererObject = {
     // 文本
@@ -272,9 +275,13 @@ export const createMarkdownRenderer = (
     // 标题
     heading(text, level) {
       const headingKey = `h${level}`;
+      const idx = headingIndex++;
       return createElement({
         styleKey: headingKey,
-        content: text
+        content: text,
+        attributes: {
+          id: `sync-h-${idx}`
+        }
       });
     },
 
@@ -579,7 +586,7 @@ const adjustFirstParagraphMargin = (html: string): string => {
 const sanitizeHtml = (html: string): string => {
   return DOMPurify.sanitize(html, {
     ADD_TAGS: ['use'], // 允许SVG use标签
-    ADD_ATTR: ['href', 'xlink:href', 'class', 'style', 'data-index'], // 允许SVG链接属性等
+    ADD_ATTR: ['href', 'xlink:href', 'class', 'style', 'data-index', 'id'], // 允许SVG链接属性等 + 同步滚动id
     ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|xxx|file|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i
   });
 };
