@@ -214,6 +214,9 @@ export interface ElectronAPI {
 
   /** 将 HTML 写入系统剪贴板 */
   writeClipboardHtml(html: string): Promise<boolean>;
+
+  /** 在系统默认浏览器中打开外部链接 */
+  openExternal(url: string): Promise<boolean>;
 }
 
 /**

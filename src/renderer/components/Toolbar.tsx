@@ -45,6 +45,14 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface ToolbarProps {
   currentTheme: ThemeType;
@@ -86,10 +94,13 @@ const Toolbar = ({
   const navigate = useNavigate();
   const {
     isElectron,
+    appVersion,
     openFile,
     saveFile,
     saveFileAs,
   } = useElectronFile(content);
+
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const menuConfigurations: Record<string, DropdownItem[]> = {
     '主题': themeOptions.map(option => ({
@@ -118,17 +129,25 @@ const Toolbar = ({
       action: () => setCodeTheme(option.value),
       checked: codeTheme === option.value
     })),
-    '关于': [
+    '帮助': [
       {
         label: 'GitHub',
         url: 'https://github.com/flyeric0212/wx-md',
         isLink: true
+      },
+      {
+        label: '关于',
+        action: () => setAboutOpen(true),
       }
     ]
   };
 
-  const handleLinkClick = (url: string) => {
-    window.open(url, '_blank');
+  const handleLinkClick = async (url: string) => {
+    if (window.electronAPI) {
+      await window.electronAPI.openExternal(url);
+    } else {
+      window.open(url, '_blank');
+    }
   };
 
   const getMenuIcon = (menuName: string) => {
@@ -138,7 +157,7 @@ const Toolbar = ({
       case '字号': return <Heading className="mr-2 h-4 w-4" />;
       case '主题色': return <Paintbrush className="mr-2 h-4 w-4" />;
       case '代码主题': return <Code className="mr-2 h-4 w-4" />;
-      case '关于': return <Info className="mr-2 h-4 w-4" />;
+      case '帮助': return <Info className="mr-2 h-4 w-4" />;
       default: return null;
     }
   };
@@ -315,6 +334,35 @@ const Toolbar = ({
           </Tooltip>
         </div>
       </header>
+
+      <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>关于 微信MD编辑器</DialogTitle>
+            <DialogDescription />
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">版本号</span>
+              <span>{appVersion || '1.0.1'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Electron</span>
+              <span>{window.electronAPI ? '是' : '否'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">操作系统</span>
+              <span>{navigator.platform}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">User Agent</span>
+              <span className="truncate max-w-[200px]" title={navigator.userAgent}>
+                {navigator.userAgent}
+              </span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 };

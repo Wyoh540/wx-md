@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron';
 import path from 'path';
 import os from 'os';
 import { promises as fs } from 'fs';
@@ -150,6 +150,16 @@ ipcMain.handle('save-file-as', async (_event, content: string) => {
     return true;
   } catch (error) {
     console.error('保存文件失败:', error);
+    return false;
+  }
+});
+
+ipcMain.handle('open-external', async (_event, url: string) => {
+  try {
+    await shell.openExternal(url);
+    return true;
+  } catch (error) {
+    console.error('打开外部链接失败:', error);
     return false;
   }
 });

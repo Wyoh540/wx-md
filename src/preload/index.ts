@@ -27,6 +27,7 @@ const electronAPI: ElectronAPI = {
   wechatWriteConfig: (config: WeChatConfig) => ipcRenderer.invoke('wechat-write-config', config),
   readFileAsBase64: (filePath: string) => ipcRenderer.invoke('read-file-as-base64', filePath),
   writeClipboardHtml: (html: string) => ipcRenderer.invoke('write-clipboard-html', html),
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
